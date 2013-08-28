@@ -36,9 +36,10 @@
 */
 
 #include <efi.h>
-#include <efilib.h>
-
 #include <elf.h>
+
+
+extern "C" {
 
 EFI_STATUS _relocate (long ldbase, Elf64_Dyn *dyn, EFI_HANDLE image, EFI_SYSTEM_TABLE *systab)
 {
@@ -68,8 +69,8 @@ EFI_STATUS _relocate (long ldbase, Elf64_Dyn *dyn, EFI_HANDLE image, EFI_SYSTEM_
 		}
 	}
 
-        if (!rel && relent == 0)
-                return EFI_SUCCESS;
+	if (!rel && relent == 0)
+		return EFI_SUCCESS;
 
 	if (!rel || relent == 0)
 		return EFI_LOAD_ERROR;
@@ -93,4 +94,6 @@ EFI_STATUS _relocate (long ldbase, Elf64_Dyn *dyn, EFI_HANDLE image, EFI_SYSTEM_
 		relsz -= relent;
 	}
 	return EFI_SUCCESS;
+}
+
 }

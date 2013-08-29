@@ -45,6 +45,7 @@ rule EFIApplication {
 	local elfLibrary = $(2) ;
 
 	Depends $(efiApplication) : $(elfLibrary) ;
+	MakeLocateDebug $(efiApplication) ;
 }
 
 actions EFIApplication {

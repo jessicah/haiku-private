@@ -1,0 +1,60 @@
+SubDir HAIKU_TOP src system boot platform efi ;
+
+UsePrivateHeaders [ FDirName kernel boot ] ;
+UsePrivateHeaders [ FDirName kernel boot platform efi ] ;
+UsePrivateHeaders [ FDirName kernel boot platform efi protocol ] ;
+UsePrivateHeaders [ FDirName kernel boot platform efi arch $(TARGET_ARCH) ] ;
+
+{
+	local defines = _BOOT_MODE GNU_EFI_USE_MS_ABI $(TARGET_ARCH) B_HAIKU_64_BIT ;
+	defines = [ FDefines $(defines) ] ;
+	SubDirCcFlags $(defines) ;
+	SubDirC++Flags $(defines) -fno-rtti ;
+}
+
+local TARGET_BOOT_CCFLAGS = ;
+local TARGET_BOOT_C++FLAGS = ;
+local TARGET_BOOT_LINKFLAGS = ;
+
+local efi_glue_src =
+	relocation_func.cpp
+	start_func.S
+	;
+
+BootMergeObject boot_platform_efi.o :
+	start.c
+	$(efi_glue_src)
+	:
+	-fPIC
+	-fshort-wchar
+	-ffreestanding
+	-fno-stack-protector
+	-m64
+	-mno-red-zone
+	-maccumulate-outgoing-args
+	;
+
+BootLd haiku_efi_bootloader.so
+  : boot_platform_efi.o
+  : $(HAIKU_TOP)/src/system/ldscripts/$(TARGET_ARCH)/boot_loader_efi.ld
+  : -Bsymbolic -shared -nostdlib -znocombreloc ;
+
+
+rule EFIApplication {
+	local efiApplication = $(1) ;
+	local elfLibrary = $(2) ;
+
+	Depends $(efiApplication) : $(elfLibrary) ;
+}
+
+actions EFIApplication {
+	rm -f $(1)
+	$(TARGET_OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel \
+	-j .rela -j .reloc -S --target=efi-app-x86-64 $(2) $(1)
+}
+
+EFIApplication haiku.efi : haiku_efi_bootloader.so ;
+
+#SEARCH on [ FGristFiles $(efi_boot_src)  ] = [ FDirName $(HAIKU_TOP) src system boot platform efi ] ;
+SEARCH on [ FGristFiles $(efi_glue_src)  ] = [ FDirName $(HAIKU_TOP) src system boot platform efi arch $(TARGET_ARCH) ] ;
+SEARCH on [ FGristFiles $(genericPlatformSources) ] = [ FDirName $(HAIKU_TOP) src system boot platform generic ] ;

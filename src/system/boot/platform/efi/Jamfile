@@ -56,6 +56,4 @@ actions EFIApplication {
 
 EFIApplication haiku.efi : haiku_efi_bootloader.so ;
 
-#SEARCH on [ FGristFiles $(efi_boot_src)  ] = [ FDirName $(HAIKU_TOP) src system boot platform efi ] ;
 SEARCH on [ FGristFiles $(efi_glue_src)  ] = [ FDirName $(HAIKU_TOP) src system boot platform efi arch $(TARGET_ARCH) ] ;
-SEARCH on [ FGristFiles $(genericPlatformSources) ] = [ FDirName $(HAIKU_TOP) src system boot platform generic ] ;

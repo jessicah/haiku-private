@@ -279,7 +279,7 @@ rule KernelArchitectureSetup architecture
 			HAIKU_BOOT_ARCHIVE_IMAGE_OFFSET = 192 ; # in kB - unused yet
 
 		case x86 :
-			HAIKU_BOOT_PLATFORM = bios_ia32 ;
+			HAIKU_BOOT_PLATFORM ?= bios_ia32 ;
 			HAIKU_BOOT_FLOPPY_IMAGE_SIZE = 2880 ; # in kB
 			# offset in floppy image (>= sizeof(haiku_loader))
 			HAIKU_BOOT_ARCHIVE_IMAGE_OFFSET = 320 ; # in kB
@@ -291,7 +291,7 @@ rule KernelArchitectureSetup architecture
 
 		case x86_64 :
 			# x86_64 completely shares the x86 bootloader.
-			HAIKU_BOOT_PLATFORM = bios_ia32 ;
+			HAIKU_BOOT_PLATFORM ?= bios_ia32 ;
 			HAIKU_BOOT_FLOPPY_IMAGE_SIZE = 2880 ; # in kB
 			# offset in floppy image (>= sizeof(haiku_loader))
 			HAIKU_BOOT_ARCHIVE_IMAGE_OFFSET = 320 ; # in kB
@@ -401,10 +401,12 @@ rule KernelArchitectureSetup architecture
 			HAIKU_KERNEL_PIC_LINKFLAGS += -z max-page-size=0x1000 ;
 			HAIKU_KERNEL_ADDON_LINKFLAGS += -z max-page-size=0x1000 ;
 
-			# Bootloader is 32-bit.
-			HAIKU_BOOT_LINKFLAGS += -m elf_i386_haiku ;
-			HAIKU_BOOT_CCFLAGS += -m32 -march=pentium ;
-			HAIKU_BOOT_C++FLAGS += -m32 -march=pentium ;
+			# BIOS Bootloader is 32-bit.
+			if $HAIKU_BOOT_PLATFORM = bios_ia32 {
+				HAIKU_BOOT_LINKFLAGS += -m elf_i386_haiku ;
+				HAIKU_BOOT_CCFLAGS += -m32 -march=pentium ;
+				HAIKU_BOOT_C++FLAGS += -m32 -march=pentium ;
+			}
 	}
 
 	# warning flags

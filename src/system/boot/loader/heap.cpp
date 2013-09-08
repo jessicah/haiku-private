@@ -500,6 +500,24 @@ malloc(size_t size)
 
 
 void*
+calloc(size_t numElements, size_t size)
+{
+	size_t numBytes = numElements * size;
+	if (numBytes == 0)
+		numBytes = 1;
+
+	void* allocated = malloc(numBytes);
+	if (allocated == NULL)
+		return NULL;
+
+	for (size_t i = 0; i < numBytes; i++)
+		((uint8*) allocated)[i] = 0;
+
+	return allocated;
+}
+
+
+void*
 realloc(void* oldBuffer, size_t newSize)
 {
 	if (newSize == 0) {

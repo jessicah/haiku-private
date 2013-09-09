@@ -504,16 +504,13 @@ calloc(size_t numElements, size_t size)
 {
 	size_t numBytes = numElements * size;
 	if (numBytes == 0)
-		numBytes = 1;
+		return NULL;
 
 	void* allocated = malloc(numBytes);
 	if (allocated == NULL)
 		return NULL;
 
-	for (size_t i = 0; i < numBytes; i++)
-		((uint8*) allocated)[i] = 0;
-
-	return allocated;
+	return memset(allocated, 0, numBytes);
 }
 
 

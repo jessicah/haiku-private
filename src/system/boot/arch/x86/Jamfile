@@ -20,8 +20,8 @@ local librootOsArchSources =
 
 BootMergeObject boot_arch_$(TARGET_KERNEL_ARCH).o :
 	$(kernelArchSources)
-	$(kernelArch32Sources)
-	$(kernelLibArchSources)
+	$(kernelArchSpecificSources)
+	$(kernelLibArchSpecificSources)
 	$(librootOsArchSources)
 	: # additional flags
 ;
@@ -29,7 +29,7 @@ BootMergeObject boot_arch_$(TARGET_KERNEL_ARCH).o :
 SEARCH on [ FGristFiles $(kernelArchSources) ]
     = [ FDirName $(HAIKU_TOP) src system kernel arch x86 ] ;
 
-if $(TARGET_ARCH) = x86_64 && TARGET_BOOT_PLATFORM != bios_ia32 {
+if $(TARGET_ARCH) = x86_64 && $(TARGET_BOOT_PLATFORM) != bios_ia32 {
 SEARCH on [ FGristFiles $(kernelArchSpecificSources) ]
     = [ FDirName $(HAIKU_TOP) src system kernel arch x86 64 ] ;
 SEARCH on [ FGristFiles $(kernelLibArchSpecificSources) ]

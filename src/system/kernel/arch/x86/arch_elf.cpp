@@ -67,7 +67,7 @@ arch_elf_relocate_rel(struct elf_image_info *image,
 	struct elf_image_info *resolveImage, Elf32_Rel *rel, int relLength)
 #endif
 {
-	addr_t S;
+	Elf32_Addr S;
 	addr_t A;
 	addr_t P;
 	addr_t finalAddress;

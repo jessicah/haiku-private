@@ -3,9 +3,9 @@ SubDir HAIKU_TOP src system boot ;
 DEFINES += _BOOT_MODE ;
 
 if $(TARGET_ARCH) = x86_64 && $(TARGET_BOOT_PLATFORM) != bios_ia32 {
-SEARCH_SOURCE += [ FDirName $(SUBDIR) $(DOTDOT) libroot os arch x86_64 ] ;
+	SEARCH_SOURCE += [ FDirName $(SUBDIR) $(DOTDOT) libroot os arch x86_64 ] ;
 } else {
-SEARCH_SOURCE += [ FDirName $(SUBDIR) $(DOTDOT) libroot os arch
+	SEARCH_SOURCE += [ FDirName $(SUBDIR) $(DOTDOT) libroot os arch
 					$(TARGET_KERNEL_ARCH) ] ;
 }
 
@@ -46,7 +46,6 @@ BootMergeObject boot_libroot.o :
 	strrchr.c
 	strtol.c
 	$(extraSources)
-	: -fno-pic
 ;
 
 AddResources haiku_loader : boot_loader.rdef ;

@@ -85,8 +85,6 @@ BootStaticLibrary boot_loader :
 
 	DataIO.cpp
 	Referenceable.cpp
-
-	: -fno-pic
 	;
 
 # The partition support is built in an extra static library
@@ -105,7 +103,6 @@ BootStaticLibrary boot_partitions :
 	intel.cpp
 	PartitionMap.cpp
 	PartitionMapParser.cpp
-	: -fno-pic
 	;
 
 # Tell Jam where to find the utility sources

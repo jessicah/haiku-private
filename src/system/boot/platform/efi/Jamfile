@@ -6,15 +6,15 @@ UsePrivateHeaders [ FDirName kernel boot platform efi protocol ] ;
 UsePrivateHeaders [ FDirName kernel boot platform efi arch $(TARGET_ARCH) ] ;
 
 {
-	local defines = _BOOT_MODE GNU_EFI_USE_MS_ABI $(TARGET_ARCH) B_HAIKU_64_BIT ;
+	local defines = _BOOT_MODE GNU_EFI_USE_MS_ABI ;
 	defines = [ FDefines $(defines) ] ;
 	SubDirCcFlags $(defines) ;
 	SubDirC++Flags $(defines) -fno-rtti ;
 }
 
-local TARGET_BOOT_CCFLAGS = ;
-local TARGET_BOOT_C++FLAGS = ;
-local TARGET_BOOT_LINKFLAGS = ;
+#local TARGET_BOOT_CCFLAGS = ;
+#local TARGET_BOOT_C++FLAGS = ;
+#local TARGET_BOOT_LINKFLAGS = ;
 
 local efi_glue_src =
 	relocation_func.cpp
@@ -22,22 +22,21 @@ local efi_glue_src =
 	;
 
 BootMergeObject boot_platform_efi.o :
-	start.c
+	start.cpp
+	console.cpp
+	debug.cpp
+	devices.cpp
+	interrupts.cpp
+	mmu.cpp
 	$(efi_glue_src)
 	:
-	-fPIC
-	-fshort-wchar
-	-ffreestanding
-	-fno-stack-protector
-	-m64
-	-mno-red-zone
-	-maccumulate-outgoing-args
+	: boot_platform_generic.a
 	;
 
-BootLd haiku_efi_bootloader.so
-  : boot_platform_efi.o
-  : $(HAIKU_TOP)/src/system/ldscripts/$(TARGET_ARCH)/boot_loader_efi.ld
-  : -Bsymbolic -shared -nostdlib -znocombreloc ;
+#BootLd haiku_efi_bootloader.so
+#  : boot_platform_efi.o
+#  : $(HAIKU_TOP)/src/system/ldscripts/$(TARGET_ARCH)/boot_loader_efi.ld
+#  : -Bsymbolic -shared -nostdlib -znocombreloc ;
 
 
 rule EFIApplication {

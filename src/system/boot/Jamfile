@@ -2,8 +2,13 @@ SubDir HAIKU_TOP src system boot ;
 
 DEFINES += _BOOT_MODE ;
 
+if $(TARGET_ARCH) = x86_64 && $(TARGET_BOOT_PLATFORM) != bios_ia32 {
+SEARCH_SOURCE += [ FDirName $(SUBDIR) $(DOTDOT) libroot os arch x86_64 ] ;
+} else {
 SEARCH_SOURCE += [ FDirName $(SUBDIR) $(DOTDOT) libroot os arch
 					$(TARGET_KERNEL_ARCH) ] ;
+}
+
 SEARCH_SOURCE += [ FDirName $(SUBDIR) $(DOTDOT) libroot posix string ] ;
 SEARCH_SOURCE += [ FDirName $(SUBDIR) $(DOTDOT) libroot posix stdlib ] ;
 SEARCH_SOURCE += [ FDirName $(SUBDIR) $(DOTDOT) libroot posix locale ] ;

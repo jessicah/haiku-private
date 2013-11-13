@@ -326,12 +326,6 @@ rule KernelArchitectureSetup architecture
 			Exit "Currently unsupported target CPU:" $(cpu) ;
 	}
 
-	# Include embedded board-specific file.
-	if $(HAIKU_BOOT_BOARD) {
-		include [ FDirName $(HAIKU_BUILD_RULES_DIR) board $(HAIKU_BOOT_BOARD)
-			BoardSetup ] ;
-	}
-
 	# private kernel headers to be used when compiling kernel code
 	HAIKU_PRIVATE_KERNEL_HEADERS =
 		[ PrivateHeaders $(DOT) kernel libroot shared
@@ -361,6 +355,7 @@ rule KernelArchitectureSetup architecture
 	HAIKU_BOOT_CCFLAGS = $(HAIKU_CCFLAGS_$(architecture)) $(gccBaseFlags) ;
 	HAIKU_BOOT_C++FLAGS = $(HAIKU_C++FLAGS_$(architecture)) $(g++BaseFlags) ;
 	HAIKU_BOOT_LINKFLAGS = ;
+	HAIKU_BOOT_LDFLAGS = -Bstatic ;
 
 	if $(gccVersion[1]) >= 4 {
 		HAIKU_KERNEL_C++FLAGS += -std=gnu++11 ;
@@ -369,6 +364,16 @@ rule KernelArchitectureSetup architecture
 	HAIKU_KERNEL_PIC_CCFLAGS = -fno-pic ;
 	HAIKU_KERNEL_PIC_LINKFLAGS = ;
 	HAIKU_KERNEL_ADDON_LINKFLAGS = ;
+
+	# Include embedded board-specific file.
+	if $(HAIKU_BOOT_BOARD) {
+		include [ FDirName $(HAIKU_BUILD_RULES_DIR) board $(HAIKU_BOOT_BOARD)
+			BoardSetup ] ;
+		if $(HAIKU_BOARD_LOADER_BASE) {
+			HAIKU_BOOT_LDFLAGS +=
+				--defsym BOARD_LOADER_BASE=$(HAIKU_BOARD_LOADER_BASE) ;
+		}
+	}
 
 	switch $(cpu) {
 		case ppc :
@@ -414,6 +419,7 @@ rule KernelArchitectureSetup architecture
 			-maccumulate-outgoing-args ;
 		HAIKU_BOOT_C++FLAGS += -fpic -fno-stack-protector -fPIC -fshort-wchar -mno-red-zone
 			-maccumulate-outgoing-args ;
+		HAIKU_BOOT_LDFLAGS = -Bstatic -Bsymbolic -shared -nostdlib -znocombreloc -nostartfiles ;
 	} else {
 		HAIKU_BOOT_CCFLAGS += -fno-pic ;
 		HAIKU_BOOT_C++FLAGS += -fno-pic ;

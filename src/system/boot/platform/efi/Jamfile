@@ -19,6 +19,7 @@ local efi_glue_src =
 local platform_src =
 	relocation_func.cpp
 	start.cpp
+	console.cpp
 	;
 
 Includes [ FGristFiles $(efi_glue_src) $(platform_src) ]

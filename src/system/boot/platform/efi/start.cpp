@@ -1,57 +1,56 @@
 /*
- * Copyright (c) 2011, Intel Corporation
- * All rights reserved.
+ * Copyright 2014-2016 Haiku, Inc.
+ * Copyright 2013 Fredrik Holmqvist, fredrik.holmqvist@gmail.com
+ * All rights reserved. Distributed under the terms of the MIT License.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *    * Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *    * Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer
- *      in the documentation and/or other materials provided with the
- *      distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Authors:
+ *      Jessica Hamilton, jessica.l.hamilton@gmail.com
+ *      Fredrik Holmqvist, fredrik.holmqvist@gmail.com
  */
-#include "efibind.h"
-#include "efidef.h"
-#include "efidevp.h"
-#include "eficon.h"
-#include "efiprot.h"
-#include "efiapi.h"
-#include "efierr.h"
+#include "efi_platform.h"
 
-static const CHAR16 *exampleText =
-	reinterpret_cast<const CHAR16*>(L"Example EFI Application. Press any key!");
+#include "console.h"
+
+#include <stdio.h>
+
+
+extern void (*__ctor_list)(void);
+extern void (*__ctor_end)(void);
+
+
+const EFI_SYSTEM_TABLE		*kSystemTable;
+const EFI_BOOT_SERVICES		*kBootServices;
+const EFI_RUNTIME_SERVICES	*kRuntimeServices;
+
+
+static void
+call_ctors(void)
+{
+	void (**f)(void);
+
+	for (f = &__ctor_list; f < &__ctor_end; f++)
+		(**f)();
+}
+
 
 /**
  * efi_main - The entry point for the EFI application
  * @image: firmware-allocated handle that identifies the image
- * @SystemTable: EFI system table
+ * @systemTable: EFI system table
  */
 extern "C" EFI_STATUS
 efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 {
-   UINTN index;
-   EFI_EVENT event = systemTable->ConIn->WaitForKey;
+	kSystemTable = systemTable;
+	kBootServices = systemTable->BootServices;
+	kRuntimeServices = systemTable->RuntimeServices;
 
-   SIMPLE_TEXT_OUTPUT_INTERFACE *conOut = systemTable->ConOut;
-   conOut->OutputString(conOut, const_cast<CHAR16*>(exampleText));
+	call_ctors();
 
-   systemTable->BootServices->WaitForEvent(1, &event, &index);
+	console_init();
 
-   return EFI_SUCCESS;
+	printf("Hello from EFI Loader for Haiku!\nPress any key to continue...\n");
+	console_wait_for_key();
+
+	return EFI_SUCCESS;
 }

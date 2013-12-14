@@ -18,13 +18,15 @@ local efi_glue_src =
 	;
 
 BootMergeObject boot_platform_efi.o :
-	start.cpp
 	console.cpp
-#	debug.cpp
+	debug.cpp
 #	devices.cpp
+	start.cpp
 #	interrupts.cpp
 #	interrupts_asm.S
+	keyboard.cpp
 #	mmu.cpp
+	serial.cpp
 	$(efi_glue_src)
 	:
 	: boot_platform_generic.a

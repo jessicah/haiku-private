@@ -49,6 +49,7 @@ Console::ReadAt(void *cookie, off_t pos, void *buffer, size_t bufferSize)
 ssize_t
 Console::WriteAt(void *cookie, off_t /*pos*/, const void *buffer, size_t bufferSize)
 {
+
 	const char *string = (const char *)buffer;
 	CHAR16 ucsBuffer[bufferSize + 3];
 	uint32 j = 0;
@@ -137,10 +138,14 @@ int
 console_wait_for_key(void)
 {
 	UINTN index;
-	EFI_EVENT event = kSystemTable->ConIn->WaitForKey;
-	kSystemTable->BootServices->WaitForEvent(1, &event, &index);
 	EFI_INPUT_KEY key;
-	kSystemTable->ConIn->ReadKeyStroke(kSystemTable->ConIn, &key);
+	EFI_EVENT event = kSystemTable->ConIn->WaitForKey;
+
+	do {
+		kSystemTable->BootServices->WaitForEvent(1, &event, &index);
+	} while (kSystemTable->ConIn->ReadKeyStroke(kSystemTable->ConIn, &key)
+			== EFI_NOT_READY);
+
 	if (key.UnicodeChar > 0)
 		return (int) key.UnicodeChar;
 
@@ -180,6 +185,8 @@ console_init(void)
 {
 	updateScreenSize();
 	console_clear_screen();
+	console_clear_screen();
+
 	// enable stdio functionality
 	stdin = (FILE *)&sInput;
 	stdout = stderr = (FILE *)&sOutput;

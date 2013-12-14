@@ -12,12 +12,24 @@
 #include <boot/platform.h>
 #include <boot/heap.h>
 #include <boot/stage2.h>
-#include <stdio.h>
 
-#include "efi_platform.h"
-
+//#include "acpi.h"
+//#include "apm.h"
+//#include "bios.h"
 #include "console.h"
-#include "interrupts.h"
+//#include "cpu.h"
+#include "debug.h"
+//#include "hpet.h"
+//#include "interrupts.h"
+#include "keyboard.h"
+//#include "long.h"
+#include "mmu.h"
+//#include "multiboot.h"
+#include "serial.h"
+//#include "smp.h"
+
+
+#define HEAP_SIZE ((1024 + 256) * 1024)
 
 
 extern void (*__ctor_list)(void);
@@ -27,6 +39,10 @@ extern uint8 _end;
 
 
 const EFI_SYSTEM_TABLE *kSystemTable;
+
+
+extern "C" int main(stage2_args *args);
+extern "C" void _start(void);
 
 
 static void
@@ -44,6 +60,25 @@ call_ctors(void)
 	for (f = &__ctor_list; f < &__ctor_end; f++) {
 		(**f)();
 	}
+}
+
+
+extern "C" uint32
+platform_boot_options(void)
+{
+	return 0;
+}
+
+
+extern "C" void
+platform_start_kernel(void)
+{
+}
+
+
+extern "C" void
+platform_exit(void)
+{
 }
 
 
@@ -71,13 +106,14 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 
   //Do all the necessary things needed...
 
-  /* serial - ignore for now */
-	/* interrupts_init(); */
+	serial_init();
+	serial_enable();
+//	interrupts_init();
 	console_init();
-  /* console - EFI console handling */
-  /* cpu init - TODO */
-  /* mmu init - TODO */
-  /* debug_init_post_mmu - TODO */
+//	cpu_init();
+//	mmu_init();
+	debug_init_post_mmu();
+
   /* parse_multiboot_commandline - probably not */
   /* check for boot keys */
 
@@ -99,7 +135,8 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
    * See info on memory map and much more in docs. */
 
   //launch kernel (main(&args);)
-
+	//main(&args);
+	dprintf(("hello world!\n"));
 	console_wait_for_key();
 	return EFI_SUCCESS;
 }

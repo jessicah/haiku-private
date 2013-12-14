@@ -142,7 +142,7 @@ rule BuildEFILoader {
 actions BuildEFILoader {
 	rm -f $(1)
 	$(TARGET_OBJCOPY_$(TARGET_PACKAGING_ARCH)) -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel \
-	-j .rela -j .reloc -S --target=efi-app-x86-64 $(2) $(1)
+	-j .rela -j .reloc --target=efi-app-x86-64 $(2) $(1)
 }
 
 BuildEFILoader haiku_loader.efi : boot_loader_$(TARGET_BOOT_PLATFORM) ;

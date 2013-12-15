@@ -19,18 +19,6 @@
 	// define this to always enable serial output
 
 
-enum serial_register_offsets {
-	SERIAL_TRANSMIT_BUFFER		= 0,
-	SERIAL_RECEIVE_BUFFER		= 0,
-	SERIAL_DIVISOR_LATCH_LOW	= 0,
-	SERIAL_DIVISOR_LATCH_HIGH	= 1,
-	SERIAL_FIFO_CONTROL			= 2,
-	SERIAL_LINE_CONTROL			= 3,
-	SERIAL_MODEM_CONTROL		= 4,
-	SERIAL_LINE_STATUS			= 5,
-	SERIAL_MODEM_STATUS			= 6,
-};
-
 static EFI_GUID sSerialIOProtocolGUID = SERIAL_IO_PROTOCOL;
 static const uint32 kSerialBaudRate = 115200;
 

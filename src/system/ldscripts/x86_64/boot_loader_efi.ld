@@ -42,10 +42,8 @@ SECTIONS
 	 *(.sbss)
 	 *(.scommon)
 	 *(.dynbss)
-	__bss_start = .;
 	 *(.bss)
 	. = ALIGN(0x1000);
-	_end = . ;
 	 *(COMMON)
 	 *(.rel.local)
 	}

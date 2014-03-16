@@ -15,7 +15,6 @@
 #include <util/ring_buffer.h>
 
 #include "keyboard.h"
-#include "mmu.h"
 #include "serial.h"
 
 

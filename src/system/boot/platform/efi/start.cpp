@@ -1,5 +1,6 @@
 /*
- * Copyright 2013, Fredrik Holmqvist, fredrik.holmqvist@gmail.com. All rights reserved.
+ * Copyright 2013 - 2014, Fredrik Holmqvist, fredrik.holmqvist@gmail.com.
+ * All rights reserved.
  * Distributed under the terms of the Haiku License.
  */
 
@@ -23,7 +24,6 @@
 //#include "interrupts.h"
 #include "keyboard.h"
 //#include "long.h"
-#include "mmu.h"
 //#include "multiboot.h"
 #include "serial.h"
 //#include "smp.h"

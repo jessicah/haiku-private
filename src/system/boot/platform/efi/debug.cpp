@@ -125,8 +125,12 @@ kprintf(const char *format, ...)
 	va_start(args, format);
 
 	// print to console, if available
-	if (stdout != NULL)
-		vfprintf(stdout, format, args);
+	if (stdout != NULL) {
+		va_list copy;
+		va_copy(copy, args);
+		vfprintf(stdout, format, copy);
+		va_end(copy);
+	}
 
 	// always print to serial line
 	dprintf_args(format, args);

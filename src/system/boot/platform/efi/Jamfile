@@ -20,8 +20,9 @@ local efi_glue_src =
 BootMergeObject boot_platform_efi.o :
 	console.cpp
 	debug.cpp
-#	devices.cpp
+	devices.cpp
 	start.cpp
+	video.cpp
 #	interrupts.cpp
 #	interrupts_asm.S
 	keyboard.cpp

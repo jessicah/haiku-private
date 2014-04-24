@@ -25,7 +25,8 @@ BootMergeObject boot_platform_efi.o :
 #	interrupts.cpp
 #	interrupts_asm.S
 	keyboard.cpp
-#	mmu.cpp
+	heap.cpp
+	mmu.cpp
 	serial.cpp
 	$(efi_glue_src)
 	:

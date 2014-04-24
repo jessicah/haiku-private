@@ -28,6 +28,7 @@ BootMergeObject boot_platform_efi.o :
 	heap.cpp
 	mmu.cpp
 	serial.cpp
+	menu.cpp
 	$(efi_glue_src)
 	:
 	: boot_platform_generic.a

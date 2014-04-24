@@ -29,14 +29,13 @@
 //#include "smp.h"
 
 
-#define HEAP_SIZE ((1024 + 256) * 1024)
-
-
 extern void (*__ctor_list)(void);
 extern void (*__ctor_end)(void);
 
 
-const EFI_SYSTEM_TABLE *kSystemTable;
+const EFI_SYSTEM_TABLE		*kSystemTable;
+const EFI_BOOT_SERVICES		*kBootServices;
+const EFI_RUNTIME_SERVICES	*kRuntimeServices;
 
 
 extern "C" int main(stage2_args *args);
@@ -84,6 +83,9 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 	stage2_args args;
 
 	kSystemTable = systemTable;
+	kBootServices = systemTable->BootServices;
+	kRuntimeServices = systemTable->RuntimeServices;
+
 	asm("cld");			// Ain't nothing but a GCC thang.
 	asm("fninit");		// initialize floating point unit
 

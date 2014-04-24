@@ -28,6 +28,7 @@ BootMergeObject boot_platform_efi.o :
 	keyboard.cpp
 	heap.cpp
 	mmu.cpp
+	acpi.cpp
 	serial.cpp
 	menu.cpp
 	$(efi_glue_src)

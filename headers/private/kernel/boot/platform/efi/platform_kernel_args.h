@@ -32,6 +32,7 @@ typedef struct bios_drive {
 	disk_identifier		identifier;
 } bios_drive;
 
+// keep in sync with the bios_ia32 platform args
 typedef struct {
 	uint16		serial_base_ports[MAX_SERIAL_PORTS];
 
@@ -40,6 +41,8 @@ typedef struct {
 	// seems to be ignored entirely?
 
 	apm_info	apm;
+
+	FixedWidthPointer<void> acpi_root;
 } _PACKED platform_kernel_args;
 
 

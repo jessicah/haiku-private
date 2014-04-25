@@ -13,53 +13,56 @@
 
 
 static EFI_GUID sGraphicsOutputGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
-
+static EFI_GRAPHICS_OUTPUT_PROTOCOL *sGraphicsOutput;
+static UINTN sBestMode;
 
 extern "C" void
 platform_switch_to_logo(void)
 {
-	return;
+	if (sGraphicsOutput == NULL)
+		return;
+
+	sGraphicsOutput->SetMode(sGraphicsOutput, sBestMode);
+	video_display_splash(gKernelArgs.frame_buffer.physical_buffer.start);
 }
 
 
 extern "C" status_t
 platform_init_video()
 {
-	EFI_GRAPHICS_OUTPUT_PROTOCOL *graphicsOutput;
 	EFI_STATUS status = kBootServices->LocateProtocol(&sGraphicsOutputGuid,
-		NULL, (void **)&graphicsOutput);
-	if (graphicsOutput == NULL) {
+		NULL, (void **)&sGraphicsOutput);
+	if (sGraphicsOutput == NULL) {
 		gKernelArgs.frame_buffer.enabled = false;
 		return B_ERROR;
 	}
 
-	UINTN bestMode = 0;
 	UINTN bestArea = 0;
 
-	for (UINTN i = 0; i < graphicsOutput->Mode->MaxMode; ++i) {
+	for (UINTN mode = 0; mode < sGraphicsOutput->Mode->MaxMode; ++mode) {
 		EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info;
 		UINTN size;
-		graphicsOutput->QueryMode(graphicsOutput, i, &size, &info);
+		sGraphicsOutput->QueryMode(sGraphicsOutput, mode, &size, &info);
 		if (info->PixelFormat == PixelRedGreenBlueReserved8BitPerColor
 			&& info->HorizontalResolution * info->VerticalResolution >= bestArea) {
-			bestMode = i;
+			sBestMode = mode;
 			bestArea = info->HorizontalResolution * info->VerticalResolution;
 		}
 	}
 
-	graphicsOutput->SetMode(graphicsOutput, bestMode);
+	sGraphicsOutput->SetMode(sGraphicsOutput, sBestMode);
 
 	gKernelArgs.frame_buffer.enabled = true;
 	gKernelArgs.frame_buffer.physical_buffer.start =
-		graphicsOutput->Mode->FrameBufferBase;
+		sGraphicsOutput->Mode->FrameBufferBase;
 	gKernelArgs.frame_buffer.physical_buffer.size =
-		graphicsOutput->Mode->FrameBufferSize;
+		sGraphicsOutput->Mode->FrameBufferSize;
 	gKernelArgs.frame_buffer.width =
-		graphicsOutput->Mode->Info->HorizontalResolution;
+		sGraphicsOutput->Mode->Info->HorizontalResolution;
 	gKernelArgs.frame_buffer.height =
-		graphicsOutput->Mode->Info->VerticalResolution;
+		sGraphicsOutput->Mode->Info->VerticalResolution;
 	gKernelArgs.frame_buffer.bytes_per_row =
-		graphicsOutput->Mode->Info->PixelsPerScanLine * 4;
+		sGraphicsOutput->Mode->Info->PixelsPerScanLine * 4;
 	gKernelArgs.frame_buffer.depth = 32;
 
 	video_display_splash(gKernelArgs.frame_buffer.physical_buffer.start);

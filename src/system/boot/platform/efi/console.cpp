@@ -24,6 +24,7 @@ class Console : public ConsoleNode {
 
 static uint32 sScreenWidth;
 static uint32 sScreenHeight;
+static uint32 sBestMode;
 static Console sInput, sOutput;
 FILE *stdin, *stdout, *stderr;
 
@@ -194,6 +195,7 @@ static void updateScreenSize(void)
 
 	sScreenWidth = width;
 	sScreenHeight = height;
+	sBestMode = bestMode;
 }
 
 status_t
@@ -207,4 +209,11 @@ console_init(void)
 	stdin = (FILE *)&sInput;
 	stdout = stderr = (FILE *)&sOutput;
 	return B_OK;
+}
+
+extern "C" void
+platform_switch_to_text_mode(void)
+{
+	kSystemTable->ConOut->Reset(kSystemTable->ConOut, false);
+	kSystemTable->ConOut->SetMode(kSystemTable->ConOut, sBestMode);
 }

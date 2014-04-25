@@ -173,8 +173,24 @@ console_wait_for_key(void)
 static void updateScreenSize(void)
 {
 	UINTN width, height;
-	kSystemTable->ConOut->QueryMode(kSystemTable->ConOut,
-		kSystemTable->ConOut->Mode->Mode, &width, &height);
+	UINTN bestArea = 0;
+	UINTN bestMode = 0;
+	SIMPLE_TEXT_OUTPUT_INTERFACE *ConOut = kSystemTable->ConOut;
+
+	for (int currentMode = 0; currentMode <= ConOut->Mode->MaxMode; ++currentMode) {
+		if (ConOut->QueryMode(ConOut, currentMode, &width, &height) == EFI_SUCCESS) {
+			if (width * height >= bestArea) {
+				dprintf("mode: selecting %d\n", currentMode);
+				bestMode = currentMode;
+			}
+			dprintf("mode: width = %d, height = %d\n", width, height);
+		}
+	}
+
+	dprintf("mode: set to %d, %dx%d\n", bestMode, width, height);
+
+	ConOut->SetMode(ConOut, bestMode);
+	ConOut->QueryMode(ConOut, ConOut->Mode->Mode, &width, &height);
 
 	sScreenWidth = width;
 	sScreenHeight = height;
@@ -184,7 +200,7 @@ status_t
 console_init(void)
 {
 	updateScreenSize();
-	console_clear_screen();
+	console_hide_cursor();
 	console_clear_screen();
 
 	// enable stdio functionality

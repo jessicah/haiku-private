@@ -86,6 +86,8 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 {
 	stage2_args args;
 
+	memset(&args, 0, sizeof(stage2_args));
+
 	kSystemTable = systemTable;
 	kBootServices = systemTable->BootServices;
 	kRuntimeServices = systemTable->RuntimeServices;

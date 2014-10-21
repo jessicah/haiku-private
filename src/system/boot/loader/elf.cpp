@@ -99,6 +99,11 @@ typedef ELFLoader<ELF32Class> ELF32Loader;
 
 
 #ifdef BOOT_SUPPORT_ELF64
+extern "C" status_t
+platform_bootloader_address_to_kernel_address(void *address, uint64_t *_result);
+extern "C" status_t
+platform_kernel_address_to_bootloader_address(uint64_t address, void **_result);
+
 struct ELF64Class {
 	static const uint8 kIdentClass = ELFCLASS64;
 
@@ -120,7 +125,11 @@ struct ELF64Class {
 		// Assume the real 64-bit base address is KERNEL_LOAD_BASE_64_BIT and
 		// the mappings in the loader address space are at KERNEL_LOAD_BASE.
 
-		void* address = (void*)(addr_t)(*_address & 0xffffffff);
+//#ifdef efi
+		void* address = (void*)*_address;
+//#else
+//		void* address = (void*)(addr_t)(*_address & 0xffffffff);
+//#endif
 
 		status_t status = platform_allocate_region(&address, size, protection,
 			false);
@@ -128,16 +137,18 @@ struct ELF64Class {
 			return status;
 
 		*_mappedAddress = address;
-		*_address = (AddrType)(addr_t)address + KERNEL_LOAD_BASE_64_BIT
-			- KERNEL_LOAD_BASE;
+		platform_bootloader_address_to_kernel_address(address, _address);
 		return B_OK;
 	}
 
 	static inline void*
 	Map(AddrType address)
 	{
-		return (void*)(addr_t)(address - KERNEL_LOAD_BASE_64_BIT
-			+ KERNEL_LOAD_BASE);
+		void *result;
+		if (platform_kernel_address_to_bootloader_address(address, &result) != B_OK) {
+			panic("Couldn't convert address %#lx", address);
+		}
+		return result;
 	}
 };
 

@@ -25,6 +25,7 @@ BootMergeObject boot_platform_efi.o :
 	video.cpp
 #	interrupts.cpp
 #	interrupts_asm.S
+        entry.S
 	keyboard.cpp
 	heap.cpp
 	mmu.cpp

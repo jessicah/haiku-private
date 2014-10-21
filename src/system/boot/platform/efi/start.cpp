@@ -193,12 +193,13 @@ platform_start_kernel(void)
 	dprintf("kernel entry at %#lx\n", gLongKernelEntry);
 
 	// map in a kernel stack
-	void *stack_address;
+	void *stack_address = NULL;
 	if (platform_allocate_region(&stack_address, KERNEL_STACK_SIZE + KERNEL_STACK_GUARD_PAGES * B_PAGE_SIZE, 0, false) != B_OK) {
 		panic("Unabled to allocate a stack");
 	}
 	gKernelArgs.cpu_kstack[0].start = fix_address((uint64_t)stack_address);
 	gKernelArgs.cpu_kstack[0].size = KERNEL_STACK_SIZE + KERNEL_STACK_GUARD_PAGES * B_PAGE_SIZE;
+	dprintf("Kernel stack at %#lx\n", gKernelArgs.cpu_kstack[0].start);
 
 	// Prepare to exit EFI boot services.
 	// Read the memory map.

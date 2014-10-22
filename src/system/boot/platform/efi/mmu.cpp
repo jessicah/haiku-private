@@ -46,11 +46,12 @@ mmu_generate_post_efi_page_tables(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *
 	uint64_t *pageTable;
 
 	// Allocate the top level PML4.
-	pml4 = (uint64*)mmu_allocate_page();
+	pml4 = NULL;
+	if (platform_allocate_region((void **)&pml4, B_PAGE_SIZE, 0, false) != B_OK)
+		panic("Failed to allocate PML4.");
 	gKernelArgs.arch_args.phys_pgdir = (uint32_t)(addr_t)pml4;
 	memset(pml4, 0, B_PAGE_SIZE);
-	// pml4 is in the pmap.
-	gKernelArgs.arch_args.vir_pgdir = ((uint64)(addr_t)pml4) + 0xFFFFFF0000000000ull;
+	platform_bootloader_address_to_kernel_address(pml4, &gKernelArgs.arch_args.vir_pgdir);
 
 	// Store the virtual memory usage information.
 	gKernelArgs.virtual_allocated_range[0].start = KERNEL_LOAD_BASE_64_BIT;

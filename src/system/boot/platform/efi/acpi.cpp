@@ -21,9 +21,127 @@
 #	define TRACE(x) ;
 #endif
 
+#if false
+static acpi_descriptor_header* sAcpiRsdt; // System Description Table
+static acpi_descriptor_header* sAcpiXsdt; // Extended System Description Table
+static int32 sNumEntries = -1;
 
-extern status_t
-acpi_check_rsdt(acpi_rsdp* rsdp);
+
+static status_t
+acpi_validate_rsdp(acpi_rsdp* rsdp)
+{
+	const char* data = (const char*)rsdp;
+	unsigned char checksum = 0;
+	for (uint32 i = 0; i < sizeof(acpi_rsdp_legacy); i++)
+		checksum += data[i];
+
+	if ((checksum & 0xff) != 0) {
+		TRACE(("acpi: rsdp failed basic checksum\n"));
+		return B_BAD_DATA;
+	}
+
+	// for ACPI 2.0+ we need to also validate the extended checksum
+	if (rsdp->revision > 0) {
+		for (uint32 i = sizeof(acpi_rsdp_legacy);
+			i < sizeof(acpi_rsdp_extended); i++) {
+				checksum += data[i];
+		}
+
+		if ((checksum & 0xff) != 0) {
+			TRACE(("acpi: rsdp failed extended checksum\n"));
+			return B_BAD_DATA;
+		}
+	}
+
+	return B_OK;
+}
+
+
+
+static status_t
+acpi_validate_rsdt(acpi_descriptor_header* rsdt)
+{
+	const char* data = (const char*)rsdt;
+	unsigned char checksum = 0;
+	for (uint32 i = 0; i < rsdt->length; i++)
+		checksum += data[i];
+
+	return checksum == 0 ? B_OK : B_BAD_DATA;
+}
+
+
+static status_t
+acpi_check_rsdt(acpi_rsdp* rsdp)
+{
+	if (acpi_validate_rsdp(rsdp) != B_OK)
+		return B_BAD_DATA;
+
+	bool usingXsdt = false;
+
+	TRACE(("acpi: found rsdp at %p oem id: %.6s, rev %d\n",
+		rsdp, rsdp->oem_id, rsdp->revision));
+	TRACE(("acpi: rsdp points to rsdt at 0x%lx\n", rsdp->rsdt_address));
+
+	uint32 length = 0;
+	acpi_descriptor_header* rsdt = NULL;
+	if (rsdp->revision > 0) {
+		length = rsdp->xsdt_length;
+		rsdt = (acpi_descriptor_header*)mmu_map_physical_memory(
+			(uint32)rsdp->xsdt_address, rsdp->xsdt_length, kDefaultPageFlags);
+		if (rsdt != NULL
+			&& strncmp(rsdt->signature, ACPI_XSDT_SIGNATURE, 4) != 0) {
+			mmu_free(rsdt, rsdp->xsdt_length);
+			rsdt = NULL;
+			TRACE(("acpi: invalid extended system description table\n"));
+		} else
+			usingXsdt = true;
+	}
+
+	// if we're ACPI v1 or we fail to map the XSDT for some reason,
+	// attempt to use the RSDT instead.
+	if (rsdt == NULL) {
+		// map and validate the root system description table
+		rsdt = (acpi_descriptor_header*)mmu_map_physical_memory(
+			rsdp->rsdt_address, sizeof(acpi_descriptor_header),
+			kDefaultPageFlags);
+		if (rsdt == NULL) {
+			TRACE(("acpi: couldn't map rsdt header\n"));
+			return B_ERROR;
+		}
+		if (strncmp(rsdt->signature, ACPI_RSDT_SIGNATURE, 4) != 0) {
+			mmu_free(rsdt, sizeof(acpi_descriptor_header));
+			rsdt = NULL;
+			TRACE(("acpi: invalid root system description table\n"));
+			return B_ERROR;
+		}
+
+		length = rsdt->length;
+		// Map the whole table, not just the header
+		TRACE(("acpi: rsdt length: %lu\n", length));
+		mmu_free(rsdt, sizeof(acpi_descriptor_header));
+		rsdt = (acpi_descriptor_header*)mmu_map_physical_memory(
+			rsdp->rsdt_address, length, kDefaultPageFlags);
+	}
+
+	if (rsdt != NULL) {
+		if (acpi_validate_rsdt(rsdt) != B_OK) {
+			TRACE(("acpi: rsdt failed checksum validation\n"));
+			mmu_free(rsdt, length);
+			return B_ERROR;
+		} else {
+			if (usingXsdt)
+				sAcpiXsdt = rsdt;
+			else
+				sAcpiRsdt = rsdt;
+			TRACE(("acpi: found valid %s at %p\n",
+				usingXsdt ? ACPI_XSDT_SIGNATURE : ACPI_RSDT_SIGNATURE,
+				rsdt));
+		}
+	} else
+		return B_ERROR;
+
+	return B_OK;
+}
 
 void
 acpi_init()
@@ -51,3 +169,4 @@ acpi_init()
 		}
 	}
 }
+#endif

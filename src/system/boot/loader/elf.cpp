@@ -99,11 +99,6 @@ typedef ELFLoader<ELF32Class> ELF32Loader;
 
 
 #ifdef BOOT_SUPPORT_ELF64
-extern "C" status_t
-platform_bootloader_address_to_kernel_address(void *address, uint64_t *_result);
-extern "C" status_t
-platform_kernel_address_to_bootloader_address(uint64_t address, void **_result);
-
 struct ELF64Class {
 	static const uint8 kIdentClass = ELFCLASS64;
 

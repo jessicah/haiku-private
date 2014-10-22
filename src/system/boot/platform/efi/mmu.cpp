@@ -59,9 +59,6 @@ mmu_generate_post_efi_page_tables(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *
 	gKernelArgs.num_virtual_allocated_ranges = 1;
 	gKernelArgs.arch_args.virtual_end = ROUNDUP(KERNEL_LOAD_BASE_64_BIT
 		+ gKernelArgs.virtual_allocated_range[0].size, 0x200000);
-	// ### not sure about this.
-	gKernelArgs.arch_args.virtual_end = next_virtual_address;
-
 
 	// Find the highest physical memory address. We map all physical memory
 	// into the kernel address space, so we want to make sure we map everything

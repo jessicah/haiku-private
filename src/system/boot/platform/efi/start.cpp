@@ -144,20 +144,12 @@ convert_kernel_args()
 	// converting, as the next pointer will be converted.
 	preloaded_image* image = gKernelArgs.preloaded_images;
 	fix_address(gKernelArgs.preloaded_images);
+	dprintf("preloaded images:\n");
 	while (image != NULL) {
+		dprintf("image: id = %d, name = %s, next = %p\n", image->id, image->name, image->next);
 		preloaded_image* next = image->next;
 		convert_preloaded_image(static_cast<preloaded_elf64_image*>(image));
 		image = next;
-	}
-
-	// Set correct kernel args range addresses.
-	dprintf("kernel args ranges:\n");
-	for (uint32 i = 0; i < gKernelArgs.num_kernel_args_ranges; i++) {
-		gKernelArgs.kernel_args_range[i].start = fix_address(
-			gKernelArgs.kernel_args_range[i].start);
-		dprintf("    base %#018" B_PRIx64 ", length %#018" B_PRIx64 "\n",
-			gKernelArgs.kernel_args_range[i].start,
-			gKernelArgs.kernel_args_range[i].size);
 	}
 
 	// Fix driver settings files.
@@ -300,6 +292,7 @@ platform_exit(void)
 	kRuntimeServices->ResetSystem(EfiResetCold, 0, 0, NULL);
 }
 
+extern void acpi_init();
 
 /**
  * efi_main - The entry point for the EFI application
@@ -345,6 +338,7 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 	// disable apm in case we ever load a 32-bit kernel...
 	gKernelArgs.platform_args.apm.version = 0;
   /* ACPI - do we need to mmap/checksum it ? Or does EFI help with that.. Is it needed */
+  //acpi_init();
   /* smp - TODO */
 	gKernelArgs.num_cpus = 1;
   /* HPET - TODO */

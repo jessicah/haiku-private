@@ -740,15 +740,15 @@ handle_driver_events(void */*_fs*/, int /*iteration*/)
 			}
 
 			case kAddWatcher:
-				TRACE(("  add watcher %ld:%lld\n", event->node.device,
-					event->node.node));
+				TRACE(("  add watcher %" B_PRId32 ":%" B_PRId64 "\n",
+					event->node.device, event->node.node));
 				add_node_listener(event->node.device, event->node.node,
 					B_WATCH_STAT | B_WATCH_NAME, sDriverWatcher);
 				break;
 
 			case kRemoveWatcher:
-				TRACE(("  remove watcher %ld:%lld\n", event->node.device,
-					event->node.node));
+				TRACE(("  remove watcher %" B_PRId32 ":%" B_PRId64 "\n",
+					event->node.device, event->node.node));
 				remove_node_listener(event->node.device, event->node.node,
 					sDriverWatcher);
 				break;

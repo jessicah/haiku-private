@@ -183,6 +183,21 @@ platform_start_kernel(void)
 
 	//smp_init_other_cpus();
 
+	// TODO: all these things.
+	gKernelArgs.arch_args.hpet_phys = 0;
+	gKernelArgs.arch_args.hpet = NULL;
+	gKernelArgs.platform_args.apm.version = 0;
+	gKernelArgs.arch_args.system_time_cv_factor = 1234;
+	gKernelArgs.arch_args.cpu_clock_speed = 666;
+	gKernelArgs.arch_args.apic_time_cv_factor = 42;
+	gKernelArgs.num_cpus = 1;
+	gKernelArgs.debug_size = 0;
+	gKernelArgs.arch_args.apic = NULL;
+	gKernelArgs.arch_args.apic_phys = 0xfee00000;
+	gKernelArgs.arch_args.cpu_apic_id[0] = 0;
+	gKernelArgs.arch_args.cpu_apic_version[0] = 0;
+	gKernelArgs.arch_args.ioapic_phys = 0xfec00000;
+
 	long_gdt_init();
 	//long_mmu_init();
 	debug_cleanup();

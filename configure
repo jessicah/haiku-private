@@ -83,6 +83,9 @@ options:
                               first occurrence specifies the primary
                               architecture of the Haiku to build, subsequent
                               ones the secondary architectures.
+  --boot-platform <platform>  Select the target boot platform; not supported by
+                              all targets.
+                              For x86_64, valid platforms=efi,bios_ia32
   --target-board <board>      ARM only: Specify the board to build for. Must be
                               one of beagle,rpi1,rpi2,cubieboard4,verdex,overo.
   --update                    re-runs last configure invocation [must be given
@@ -612,6 +615,7 @@ while [ $# -gt 0 ] ; do
 			)
 			shift 2
 			;;
+		--boot-platform=*)	HAIKU_BOOT_PLATFORM=`echo $1 | cut -d'=' -f2-`; shift 1;;
 		--use-clang) useClang=1; shift 1;;
 		--use-gcc-pipe)	HAIKU_USE_GCC_PIPE=1; shift 1;;
 		--use-gcc-graphite)	useGccGraphiteDefault=1; shift 1;;
@@ -860,6 +864,8 @@ HAIKU_HOST_USE_32BIT				?= "${HAIKU_HOST_USE_32BIT}" ;
 HAIKU_HOST_USE_XATTR				?= "${HAIKU_HOST_USE_XATTR}" ;
 HAIKU_HOST_USE_XATTR_REF			?= "${HAIKU_HOST_USE_XATTR_REF}" ;
 HAIKU_HOST_BUILD_ONLY				?= "${HAIKU_HOST_BUILD_ONLY}" ;
+
+HAIKU_BOOT_PLATFORM			?= ${HAIKU_BOOT_PLATFORM} ;
 
 HAIKU_PACKAGING_ARCHS		?= ${HAIKU_PACKAGING_ARCHS} ;
 

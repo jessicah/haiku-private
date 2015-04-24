@@ -5,9 +5,14 @@
 
 
 #include "efi_platform.h"
+#include "acpi.h"
+#include "mmu.h"
+
+#include <KernelExport.h>
 
 #include <SupportDefs.h>
 #include <arch/x86/arch_acpi.h>
+#include <boot/stage2.h>
 #include <boot/platform.h>
 #include <boot/stdio.h>
 
@@ -21,10 +26,23 @@
 #	define TRACE(x) ;
 #endif
 
-#if false
+
 static acpi_descriptor_header* sAcpiRsdt; // System Description Table
 static acpi_descriptor_header* sAcpiXsdt; // Extended System Description Table
 static int32 sNumEntries = -1;
+
+
+extern "C" addr_t
+mmu_map_physical_memory(addr_t physicalAddress, size_t size, uint32 flags)
+{
+	return physicalAddress;
+}
+
+extern "C" void
+mmu_free(void *virtualAddress, size_t size)
+{
+	return;
+}
 
 
 static status_t
@@ -80,7 +98,7 @@ acpi_check_rsdt(acpi_rsdp* rsdp)
 
 	TRACE(("acpi: found rsdp at %p oem id: %.6s, rev %d\n",
 		rsdp, rsdp->oem_id, rsdp->revision));
-	TRACE(("acpi: rsdp points to rsdt at 0x%lx\n", rsdp->rsdt_address));
+	TRACE(("acpi: rsdp points to rsdt at 0x%x\n", rsdp->rsdt_address));
 
 	uint32 length = 0;
 	acpi_descriptor_header* rsdt = NULL;
@@ -117,7 +135,7 @@ acpi_check_rsdt(acpi_rsdp* rsdp)
 
 		length = rsdt->length;
 		// Map the whole table, not just the header
-		TRACE(("acpi: rsdt length: %lu\n", length));
+		TRACE(("acpi: rsdt length: %u\n", length));
 		mmu_free(rsdt, sizeof(acpi_descriptor_header));
 		rsdt = (acpi_descriptor_header*)mmu_map_physical_memory(
 			rsdp->rsdt_address, length, kDefaultPageFlags);
@@ -143,6 +161,80 @@ acpi_check_rsdt(acpi_rsdp* rsdp)
 	return B_OK;
 }
 
+template<typename PointerType>
+acpi_descriptor_header*
+acpi_find_table_generic(const char* signature, acpi_descriptor_header* acpiSdt)
+{
+	if (acpiSdt == NULL)
+		return NULL;
+
+	if (sNumEntries == -1) {
+		// if using the xsdt, our entries are 64 bits wide.
+		sNumEntries = (acpiSdt->length
+			- sizeof(acpi_descriptor_header))
+				/ sizeof(PointerType);
+	}
+
+	if (sNumEntries <= 0) {
+		TRACE(("acpi: root system description table is empty\n"));
+		return NULL;
+	}
+
+	TRACE(("acpi: searching %d entries for table '%.4s'\n", sNumEntries,
+		signature));
+
+	PointerType* pointer = (PointerType*)((uint8*)acpiSdt
+		+ sizeof(acpi_descriptor_header));
+
+	acpi_descriptor_header* header = NULL;
+	for (int32 j = 0; j < sNumEntries; j++, pointer++) {
+		header = (acpi_descriptor_header*)
+			mmu_map_physical_memory((uint32)*pointer,
+				sizeof(acpi_descriptor_header), kDefaultPageFlags);
+
+		if (header == NULL
+			|| strncmp(header->signature, signature, 4) != 0) {
+			// not interesting for us
+			TRACE(("acpi: Looking for '%.4s'. Skipping '%.4s'\n",
+				signature, header != NULL ? header->signature : "null"));
+
+			if (header != NULL) {
+				mmu_free(header, sizeof(acpi_descriptor_header));
+				header = NULL;
+			}
+
+			continue;
+		}
+
+		TRACE(("acpi: Found '%.4s' @ %p\n", signature, pointer));
+		break;
+	}
+
+
+	if (header == NULL)
+		return NULL;
+
+	// Map the whole table, not just the header
+	uint32 length = header->length;
+	mmu_free(header, sizeof(acpi_descriptor_header));
+
+	return (acpi_descriptor_header*)mmu_map_physical_memory(
+		(uint32)*pointer, length, kDefaultPageFlags);
+}
+
+
+acpi_descriptor_header*
+acpi_find_table(const char* signature)
+{
+	if (sAcpiRsdt != NULL)
+		return acpi_find_table_generic<uint32>(signature, sAcpiRsdt);
+	else if (sAcpiXsdt != NULL)
+		return acpi_find_table_generic<uint64>(signature, sAcpiXsdt);
+
+	return NULL;
+}
+
+
 void
 acpi_init()
 {
@@ -164,9 +256,10 @@ acpi_init()
 			if (strncmp((char *)rsdp, ACPI_RSDP_SIGNATURE, 8) == 0)
 				TRACE(("acpi_init: found ACPI RSDP signature at %p\n", rsdp));
 
-			if (rsdp != NULL && acpi_check_rsdt(rsdp) == B_OK)
+			if (rsdp != NULL && acpi_check_rsdt(rsdp) == B_OK) {
+				gKernelArgs.platform_args.acpi_root = rsdp;
 				break;
+			}
 		}
 	}
 }
-#endif

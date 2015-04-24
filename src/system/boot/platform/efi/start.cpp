@@ -15,9 +15,10 @@
 #include <boot/platform.h>
 #include <boot/heap.h>
 #include <boot/stage2.h>
+#include <boot/kernel_args.h>
 #include <kernel.h>
 
-//#include "acpi.h"
+#include "acpi.h"
 //#include "apm.h"
 //#include "bios.h"
 #include "console.h"
@@ -146,7 +147,7 @@ convert_kernel_args()
 	fix_address(gKernelArgs.preloaded_images);
 	dprintf("preloaded images:\n");
 	while (image != NULL) {
-		dprintf("image: id = %d, name = %s, next = %p\n", image->id, image->name, image->next);
+		dprintf("image: id = %d, name = %s, next = %p\n", image->id, image->name.Pointer(), image->next.Pointer());
 		preloaded_image* next = image->next;
 		convert_preloaded_image(static_cast<preloaded_elf64_image*>(image));
 		image = next;
@@ -248,6 +249,9 @@ platform_start_kernel(void)
 	uint64_t final_pml4 = mmu_generate_post_efi_page_tables(memory_map_size, memory_map, descriptor_size, descriptor_version);
 	dprintf("Final PML4 at %#lx\n", final_pml4);
 
+	dprintf("sizeof platform_args = %lu\n", sizeof(platform_kernel_args));
+	dprintf("sizeof arch args = %lu\n", sizeof(arch_kernel_args));
+
 	// Attempt to fetch the memory map and exit boot services.
 	// This needs to be done in a loop, as ExitBootServices can change the memory map.
 	// Even better: Only GetMemoryMap and ExitBootServices can be called after the
@@ -292,7 +296,6 @@ platform_exit(void)
 	kRuntimeServices->ResetSystem(EfiResetCold, 0, 0, NULL);
 }
 
-extern void acpi_init();
 
 /**
  * efi_main - The entry point for the EFI application
@@ -338,7 +341,7 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 	// disable apm in case we ever load a 32-bit kernel...
 	gKernelArgs.platform_args.apm.version = 0;
   /* ACPI - do we need to mmap/checksum it ? Or does EFI help with that.. Is it needed */
-  //acpi_init();
+	acpi_init();
   /* smp - TODO */
 	gKernelArgs.num_cpus = 1;
   /* HPET - TODO */

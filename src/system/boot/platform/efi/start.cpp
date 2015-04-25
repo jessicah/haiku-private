@@ -307,8 +307,6 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 {
 	stage2_args args;
 
-	memset(&args, 0, sizeof(stage2_args));
-
 	kImage = image;
 	kSystemTable = systemTable;
 	kBootServices = systemTable->BootServices;
@@ -316,6 +314,8 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 
 	asm("cld");			// Ain't nothing but a GCC thang.
 	asm("fninit");		// initialize floating point unit
+
+	memset(&args, 0, sizeof(stage2_args));
 
 	/* Needed, Intel Beyond BIOS http://software.intel.com/en-us/articles/uefi-application
 	 * No direct support

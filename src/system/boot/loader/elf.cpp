@@ -113,18 +113,12 @@ struct ELF64Class {
 	typedef Elf64_Rel				RelType;
 	typedef Elf64_Rela				RelaType;
 
+#ifdef _BOOT_PLATFORM_efi
 	static inline status_t
 	AllocateRegion(AddrType* _address, AddrType size, uint8 protection,
 		void **_mappedAddress)
 	{
-		// Assume the real 64-bit base address is KERNEL_LOAD_BASE_64_BIT and
-		// the mappings in the loader address space are at KERNEL_LOAD_BASE.
-
-//#ifdef efi
 		void* address = (void*)*_address;
-//#else
-//		void* address = (void*)(addr_t)(*_address & 0xffffffff);
-//#endif
 
 		status_t status = platform_allocate_region(&address, size, protection,
 			false);
@@ -145,6 +139,34 @@ struct ELF64Class {
 		}
 		return result;
 	}
+#else
+	static inline status_t
+	AllocateRegion(AddrType* _address, AddrType size, uint8 protection,
+		void **_mappedAddress)
+	{
+		// Assume the real 64-bit base address is KERNEL_LOAD_BASE_64_BIT and
+		// the mappings in the loader address space are at KERNEL_LOAD_BASE.
+
+		void* address = (void*)(addr_t)(*_address & 0xffffffff);
+
+		status_t status = platform_allocate_region(&address, size, protection,
+			false);
+		if (status != B_OK)
+			return status;
+
+		*_mappedAddress = address;
+		*_address = (AddrType)(addr_t)address + KERNEL_LOAD_BASE_64_BIT
+			- KERNEL_LOAD_BASE;
+		return B_OK;
+	}
+
+	static inline void*
+	Map(AddrType address)
+	{
+		return (void*)(addr_t)(address - KERNEL_LOAD_BASE_64_BIT
+			+ KERNEL_LOAD_BASE);
+	}
+#endif
 };
 
 typedef ELFLoader<ELF64Class> ELF64Loader;
@@ -158,7 +180,7 @@ ELFLoader<Class>::Create(int fd, preloaded_image** _image)
 	ImageType* image = (ImageType*)kernel_args_malloc(sizeof(ImageType));
 	if (image == NULL)
 		return B_NO_MEMORY;
-	
+
 	ssize_t length = read_pos(fd, 0, &image->elf_header, sizeof(EhdrType));
 	if (length < (ssize_t)sizeof(EhdrType)) {
 		kernel_args_free(image);
@@ -231,7 +253,7 @@ ELFLoader<Class>::Load(int fd, preloaded_image* _image)
 				// known but unused type
 				continue;
 			default:
-				dprintf("unhandled pheader type 0x%lx\n", header.p_type);
+				dprintf("unhandled pheader type 0x%" B_PRIx32 "\n", header.p_type);
 				continue;
 		}
 
@@ -326,7 +348,7 @@ ELFLoader<Class>::Load(int fd, preloaded_image* _image)
 			header.p_filesz);
 		if (length < (ssize_t)header.p_filesz) {
 			status = B_BAD_DATA;
-			dprintf("error reading in seg %ld\n", i);
+			dprintf("error reading in seg %" B_PRId32 "\n", i);
 			goto error2;
 		}
 

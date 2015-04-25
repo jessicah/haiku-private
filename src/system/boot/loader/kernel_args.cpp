@@ -370,10 +370,15 @@ kernel_args_malloc(size_t size)
 			return NULL;
 		}
 
+#ifdef _BOOT_PLATFORM_efi
 		uint64 translated_block;
 		platform_bootloader_address_to_kernel_address(block, &translated_block);
 		if (add_kernel_args_range((void *)translated_block, size) != B_OK)
 			panic("kernel_args max range too low!\n");
+#else
+		if (add_kernel_args_range(block, size) != B_OK)
+			panic("kernel_args max range too low!\n");
+#endif
 		return block;
 	}
 
@@ -387,10 +392,15 @@ kernel_args_malloc(size_t size)
 	sFirstFree = (void*)((addr_t)block + size);
 	sLast = block;
 	sFree = kChunkSize - size;
+#ifdef _BOOT_PLATFORM_efi
 	uint64 translated_block;
 	platform_bootloader_address_to_kernel_address(block, &translated_block);
 	if (add_kernel_args_range((void *)translated_block, kChunkSize) != B_OK)
 		panic("kernel_args max range too low!\n");
+#else
+	if (add_kernel_args_range(block, kChunkSize) != B_OK)
+		panic("kernel_args max range too low!\n");
+#endif
 
 	return block;
 }

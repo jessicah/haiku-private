@@ -31,19 +31,10 @@ static acpi_descriptor_header* sAcpiRsdt; // System Description Table
 static acpi_descriptor_header* sAcpiXsdt; // Extended System Description Table
 static int32 sNumEntries = -1;
 
-
-extern "C" addr_t
-mmu_map_physical_memory(addr_t physicalAddress, size_t size, uint32 flags)
-{
-	return physicalAddress;
+void
+mmu_free(void *virtualAddress, size_t size) {
+	dprintf("skip freeing virtual address... %p\n", virtualAddress);
 }
-
-extern "C" void
-mmu_free(void *virtualAddress, size_t size)
-{
-	return;
-}
-
 
 static status_t
 acpi_validate_rsdp(acpi_rsdp* rsdp)
@@ -188,9 +179,8 @@ acpi_find_table_generic(const char* signature, acpi_descriptor_header* acpiSdt)
 
 	acpi_descriptor_header* header = NULL;
 	for (int32 j = 0; j < sNumEntries; j++, pointer++) {
-		header = (acpi_descriptor_header*)
-			mmu_map_physical_memory((uint32)*pointer,
-				sizeof(acpi_descriptor_header), kDefaultPageFlags);
+		header = (acpi_descriptor_header*)mmu_map_physical_memory((uint32)*pointer,
+			sizeof(acpi_descriptor_header), kDefaultPageFlags);
 
 		if (header == NULL
 			|| strncmp(header->signature, signature, 4) != 0) {

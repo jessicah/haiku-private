@@ -32,6 +32,7 @@ BootMergeObject boot_platform_efi.o :
 	acpi.cpp
 	serial.cpp
 	menu.cpp
+	hpet.cpp
 	$(efi_glue_src)
 	:
 	: boot_platform_generic.a

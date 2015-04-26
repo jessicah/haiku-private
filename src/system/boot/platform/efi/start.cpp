@@ -24,7 +24,7 @@
 #include "console.h"
 //#include "cpu.h"
 #include "debug.h"
-//#include "hpet.h"
+#include "hpet.h"
 //#include "interrupts.h"
 #include "keyboard.h"
 //#include "multiboot.h"
@@ -174,12 +174,12 @@ platform_start_kernel(void)
 	preloaded_elf64_image *image = static_cast<preloaded_elf64_image *>(
 		gKernelArgs.kernel_image.Pointer());
 
+		acpi_init();
+		hpet_init();
+
 	//smp_init_other_cpus();
 
 	// TODO: all these things.
-	gKernelArgs.arch_args.hpet_phys = 0;
-	gKernelArgs.arch_args.hpet = NULL;
-	gKernelArgs.platform_args.apm.version = 0;
 	gKernelArgs.arch_args.system_time_cv_factor = 1234;
 	gKernelArgs.arch_args.cpu_clock_speed = 666;
 	gKernelArgs.arch_args.apic_time_cv_factor = 42;
@@ -333,7 +333,6 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 //	cpu_init();
 //	mmu_init();
 	debug_init_post_mmu();
-
   /* parse_multiboot_commandline - probably not */
   /* check for boot keys */
 
@@ -341,12 +340,13 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 	// disable apm in case we ever load a 32-bit kernel...
 	gKernelArgs.platform_args.apm.version = 0;
   /* ACPI - do we need to mmap/checksum it ? Or does EFI help with that.. Is it needed */
-	acpi_init();
+
+	// we can't do memory allocations until platform_start_kernel()... seems odd
+
+	//acpi_init();
   /* smp - TODO */
 	gKernelArgs.num_cpus = 1;
-  /* HPET - TODO */
-	gKernelArgs.arch_args.hpet_phys = 0;
-	gKernelArgs.arch_args.hpet = NULL;
+	//hpet_init();
   /* dump_multiboot_info */
 
 

@@ -29,7 +29,7 @@
 #include "keyboard.h"
 //#include "multiboot.h"
 #include "serial.h"
-//#include "smp.h"
+#include "smp.h"
 #include "mmu.h"
 
 
@@ -174,22 +174,16 @@ platform_start_kernel(void)
 	preloaded_elf64_image *image = static_cast<preloaded_elf64_image *>(
 		gKernelArgs.kernel_image.Pointer());
 
-		acpi_init();
-		hpet_init();
-
-	//smp_init_other_cpus();
+	acpi_init();
+	smp_init();
+	smp_init_other_cpus();
+	hpet_init();
 
 	// TODO: all these things.
 	gKernelArgs.arch_args.system_time_cv_factor = 1234;
 	gKernelArgs.arch_args.cpu_clock_speed = 666;
 	gKernelArgs.arch_args.apic_time_cv_factor = 42;
-	gKernelArgs.num_cpus = 1;
 	gKernelArgs.debug_size = 0;
-	gKernelArgs.arch_args.apic = NULL;
-	gKernelArgs.arch_args.apic_phys = 0xfee00000;
-	gKernelArgs.arch_args.cpu_apic_id[0] = 0;
-	gKernelArgs.arch_args.cpu_apic_version[0] = 0;
-	gKernelArgs.arch_args.ioapic_phys = 0xfec00000;
 
 	long_gdt_init();
 	//long_mmu_init();
@@ -324,7 +318,12 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 	call_ctors();
 		// call C++ constructors before doing anything else
 
-  //Do all the necessary things needed...
+	// Do all the necessary things needed...
+
+	// Anything that depends on allocation needs to go
+	// into platform_start_kernel instead.
+	// Anything that currently uses mmu_map_physical_memory,
+	// for example, needs to go there instead.
 
 	serial_init();
 	serial_enable();
@@ -333,32 +332,17 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 //	cpu_init();
 //	mmu_init();
 	debug_init_post_mmu();
-  /* parse_multiboot_commandline - probably not */
-  /* check for boot keys */
 
-  /* APM - skip entirely */
-	// disable apm in case we ever load a 32-bit kernel...
+	// Disable apm in case we ever load a 32-bit kernel...
 	gKernelArgs.platform_args.apm.version = 0;
-  /* ACPI - do we need to mmap/checksum it ? Or does EFI help with that.. Is it needed */
 
-	// we can't do memory allocations until platform_start_kernel()... seems odd
-
-	//acpi_init();
-  /* smp - TODO */
-	gKernelArgs.num_cpus = 1;
-	//hpet_init();
-  /* dump_multiboot_info */
-
-
-  /* Map runtime services to virtual memory
-   * Get/Set EFI Variables
-   * Get/Set time (with timezone)
-   * Get/Set Wakup time
-   * Reset system
-   * Send 'capsules'? to EFI to be executed
-   */
-  /* Exit boot services - Only use runtime ( and maybe some system services) from here on.
-   * See info on memory map and much more in docs. */
+	/* Map runtime services to virtual memory
+	 * Get/Set EFI Variables
+	 * Get/Set time (with timezone)
+	 * Get/Set Wakup time
+	 * Reset system
+	 * Send 'capsules'? to EFI to be executed
+	 */
 
 	main(&args);
 

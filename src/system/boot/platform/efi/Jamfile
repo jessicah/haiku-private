@@ -33,6 +33,8 @@ BootMergeObject boot_platform_efi.o :
 	serial.cpp
 	menu.cpp
 	hpet.cpp
+	smp.cpp
+	#support.S
 	$(efi_glue_src)
 	:
 	: boot_platform_generic.a

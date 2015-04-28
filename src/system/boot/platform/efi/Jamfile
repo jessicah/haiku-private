@@ -25,7 +25,7 @@ BootMergeObject boot_platform_efi.o :
 	video.cpp
 #	interrupts.cpp
 #	interrupts_asm.S
-        entry.S
+	entry.S
 	keyboard.cpp
 	heap.cpp
 	mmu.cpp
@@ -33,8 +33,9 @@ BootMergeObject boot_platform_efi.o :
 	serial.cpp
 	menu.cpp
 	hpet.cpp
+	cpu.cpp
 	smp.cpp
-	#support.S
+	support.S
 	$(efi_glue_src)
 	:
 	: boot_platform_generic.a

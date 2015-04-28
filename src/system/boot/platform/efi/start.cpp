@@ -19,15 +19,12 @@
 #include <kernel.h>
 
 #include "acpi.h"
-//#include "apm.h"
-//#include "bios.h"
 #include "console.h"
-//#include "cpu.h"
+#include "cpu.h"
 #include "debug.h"
 #include "hpet.h"
 //#include "interrupts.h"
 #include "keyboard.h"
-//#include "multiboot.h"
 #include "serial.h"
 #include "smp.h"
 #include "mmu.h"
@@ -180,9 +177,6 @@ platform_start_kernel(void)
 	hpet_init();
 
 	// TODO: all these things.
-	gKernelArgs.arch_args.system_time_cv_factor = 1234;
-	gKernelArgs.arch_args.cpu_clock_speed = 666;
-	gKernelArgs.arch_args.apic_time_cv_factor = 42;
 	gKernelArgs.debug_size = 0;
 
 	long_gdt_init();
@@ -329,7 +323,7 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 	serial_enable();
 //	interrupts_init();
 	console_init();
-//	cpu_init();
+	cpu_init();
 //	mmu_init();
 	debug_init_post_mmu();
 

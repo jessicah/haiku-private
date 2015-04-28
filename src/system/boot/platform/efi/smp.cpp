@@ -136,30 +136,21 @@ calculate_apic_timer_conversion_factor(void)
 
 	// setup the timer
 	config = apic_read(APIC_LVT_TIMER);
-	TRACE(("1."));
 	config = (config & APIC_LVT_TIMER_MASK) + APIC_LVT_MASKED;
 		// timer masked, vector 0
 	apic_write(APIC_LVT_TIMER, config);
-	TRACE(("2."));
 
 	config = (apic_read(APIC_TIMER_DIVIDE_CONFIG) & ~0x0000000f);
-	TRACE(("3."));
 	apic_write(APIC_TIMER_DIVIDE_CONFIG, config | APIC_TIMER_DIVIDE_CONFIG_1);
-	TRACE(("4."));
 		// divide clock by one
 
 	t1 = system_time();
-	TRACE(("5."));
 	apic_write(APIC_INITIAL_TIMER_COUNT, 0xffffffff); // start the counter
-	TRACE(("6."));
 
 	execute_n_instructions(128 * 20000);
-	TRACE(("7."));
 
 	count = apic_read(APIC_CURRENT_TIMER_COUNT);
-	TRACE(("8."));
 	t2 = system_time();
-	TRACE(("9."));
 
 	count = 0xffffffff - count;
 
@@ -221,7 +212,7 @@ smp_init_other_cpus(void)
 	TRACE(("smp: apic (mapped) = %p\n", (void *)gKernelArgs.arch_args.apic));
 
 	// calculate how fast the apic timer is
-	//calculate_apic_timer_conversion_factor();
+	calculate_apic_timer_conversion_factor();
 
 	if (gKernelArgs.num_cpus < 2)
 		return;

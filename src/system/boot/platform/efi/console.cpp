@@ -184,11 +184,11 @@ static void updateScreenSize(void)
 				dprintf("mode: selecting %d\n", currentMode);
 				bestMode = currentMode;
 			}
-			dprintf("mode: width = %d, height = %d\n", width, height);
+			dprintf("mode: width = %" B_PRId64 ", height = %" B_PRId64 "\n", width, height);
 		}
 	}
 
-	dprintf("mode: set to %d, %dx%d\n", bestMode, width, height);
+	dprintf("mode: set to %" B_PRId64 ", %" B_PRId64 "x%" B_PRId64 "\n", bestMode, width, height);
 
 	ConOut->SetMode(ConOut, bestMode);
 	ConOut->QueryMode(ConOut, ConOut->Mode->Mode, &width, &height);

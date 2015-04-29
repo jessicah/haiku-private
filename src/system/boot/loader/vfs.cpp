@@ -292,8 +292,12 @@ MemoryDisk::MemoryDisk(const uint8* data, size_t size, const char* name)
 
 
 ssize_t
-MemoryDisk::ReadAt(void* cookie, off_t pos, void* buffer, size_t bufferSize)
+MemoryDisk::ReadAt(void* cookie, off_t offset, void* buffer, size_t bufferSize)
 {
+	size_t pos = (size_t)offset;
+
+	if (offset < 0)
+		return B_BAD_VALUE;
 	if (pos >= fSize)
 		return 0;
 
@@ -525,7 +529,7 @@ BootVolume::_SetTo(Directory* rootDirectory,
 	fSystemDirectory = static_cast<Directory*>(systemNode);
 
 	if (packageVolumeInfo == NULL) {
-		// get a package volume info 
+		// get a package volume info
 		BReference<PackageVolumeInfo> packageVolumeInfoReference(
 			new(std::nothrow) PackageVolumeInfo);
 		status_t error = packageVolumeInfoReference->SetTo(fSystemDirectory,

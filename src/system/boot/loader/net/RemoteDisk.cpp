@@ -83,7 +83,7 @@ RemoteDisk::Init(ip_addr_t serverAddress, uint16 serverPort, off_t imageSize)
 	fSocket = new(nothrow) UDPSocket;
 	if (!fSocket)
 		return B_NO_MEMORY;
-	
+
 	status_t error = fSocket->Bind(INADDR_ANY, 6666);
 	if (error != B_OK)
 		return error;
@@ -169,7 +169,7 @@ RemoteDisk::GetName(char *nameBuffer, size_t bufferSize) const
 	if (!nameBuffer)
 		return B_BAD_VALUE;
 
-	snprintf(nameBuffer, bufferSize, "RemoteDisk:%ld.%ld.%ld.%ld:%hd",
+	snprintf(nameBuffer, bufferSize, "RemoteDisk:%" B_PRId32 ".%" B_PRId32 ".%" B_PRId32 ".%" B_PRId32 ":%" B_PRId16 "",
 		(fServerAddress >> 24) & 0xff, (fServerAddress >> 16) & 0xff,
 		(fServerAddress >> 8) & 0xff, fServerAddress & 0xff, fServerPort);
 
@@ -249,13 +249,13 @@ RemoteDisk::_ReadFromPacket(off_t &pos, uint8 *&buffer, size_t &bufferSize)
 	uint32 packetSize = ntohs(header->size);
 	if (packetOffset > (uint64)pos || packetOffset + packetSize <= (uint64)pos)
 		return 0;
-		
+
 	// we do indeed have some bytes already
 	size_t toCopy = size_t(packetOffset + packetSize - (uint64)pos);
 	if (toCopy > bufferSize)
 		toCopy = bufferSize;
 	memcpy(buffer, header->data + (pos - packetOffset), toCopy);
-	
+
 	pos += toCopy;
 	buffer += toCopy;
 	bufferSize -= toCopy;

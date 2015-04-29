@@ -300,12 +300,12 @@ slower_sample:
 	//dprintf("factors: %lu %llu\n", gTimeConversionFactor, clockSpeed);
 
 	if (quickSampleCount > 1) {
-		dprintf("needed %lu quick samples for TSC calibration\n",
+		dprintf("needed %" B_PRIu32 " quick samples for TSC calibration\n",
 			quickSampleCount);
 	}
 
 	if (slowSampleCount > 1) {
-		dprintf("needed %lu slow samples for TSC calibration\n",
+		dprintf("needed %" B_PRIu32 " slow samples for TSC calibration\n",
 			slowSampleCount);
 	}
 

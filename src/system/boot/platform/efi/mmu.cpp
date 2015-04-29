@@ -277,7 +277,7 @@ mmu_map_physical_memory(addr_t physicalAddress, size_t size, uint32 flags)
 	allocated_memory_regions = region;
 	region->vaddr = 0;
 	region->paddr = physicalAddress;
-	region->size = size;
+	region->size = aligned_size;
 	region->released = false;
 
 	return physicalAddress + pageOffset;

@@ -187,7 +187,7 @@ Partition::ReadAt(void *cookie, off_t position, void *buffer, size_t bufferSize)
 	if (position < 0)
 		return B_BAD_VALUE;
 
-	if (position + bufferSize > this->size)
+	if (position + (ssize_t)bufferSize > this->size)
 		bufferSize = this->size - position;
 
 	ssize_t result = read_pos(fFD, this->offset + position, buffer, bufferSize);
@@ -204,7 +204,7 @@ Partition::WriteAt(void *cookie, off_t position, const void *buffer,
 	if (position < 0)
 		return B_BAD_VALUE;
 
-	if (position + bufferSize > this->size)
+	if (position + (ssize_t)bufferSize > this->size)
 		bufferSize = this->size - position;
 
 	ssize_t result = write_pos(fFD, this->offset + position, buffer,

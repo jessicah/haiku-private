@@ -32,7 +32,7 @@ platform_init_video()
 {
 	EFI_STATUS status = kBootServices->LocateProtocol(&sGraphicsOutputGuid,
 		NULL, (void **)&sGraphicsOutput);
-	if (sGraphicsOutput == NULL) {
+	if (status != EFI_SUCCESS || sGraphicsOutput == NULL) {
 		gKernelArgs.frame_buffer.enabled = false;
 		return B_ERROR;
 	}

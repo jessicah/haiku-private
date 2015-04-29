@@ -11,7 +11,6 @@
 
 
 #define STAGE_PAGES	0x2000	/* 32 MB */
-#define PAGE_SIZE	0x1000	/*  4 kB */
 
 
 EFI_PHYSICAL_ADDRESS staging;

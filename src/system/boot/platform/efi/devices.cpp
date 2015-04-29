@@ -59,7 +59,7 @@ class EFIBlockDevice : public Node {
 
 static bool sBlockDevicesAdded = false;
 
-
+#if false
 // we can actually determine this with EFI... to fix up
 static void
 check_cd_boot(EFIBlockDevice *device)
@@ -105,7 +105,6 @@ get_next_check_sum_offset(int32 index, off_t maxSize)
  *	array of uint32 values.
  *	Note, this must use the same method as the one used in kernel/fs/vfs_boot.cpp.
  */
-
 static uint32
 compute_check_sum(EFIBlockDevice *device, off_t offset)
 {
@@ -224,7 +223,7 @@ find_unique_check_sums(NodeList *devices)
 
 	dprintf("Could not make EFI block devices unique! Might boot from the wrong disk...\n");
 }
-
+#endif
 
 static status_t
 add_block_devices(NodeList *devicesList, bool identifierMissing) // should bool be a reference?
@@ -237,8 +236,6 @@ add_block_devices(NodeList *devicesList, bool identifierMissing) // should bool 
 	EFI_HANDLE *handles, handle;
 	EFI_STATUS status;
 	UINTN size;
-	CHAR16 *path;
-	status_t result;
 
 	size = 0;
 	handles = NULL;

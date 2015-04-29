@@ -75,7 +75,7 @@ smp_do_acpi_config(void)
 	}
 
 	gKernelArgs.arch_args.apic_phys = madt->local_apic_address;
-	TRACE(("smp: local apic address is 0x%lx\n", madt->local_apic_address));
+	TRACE(("smp: local apic address is 0x%" B_PRIx32 "\n", madt->local_apic_address));
 
 	acpi_apic *apic = (acpi_apic *)((uint8 *)madt + sizeof(acpi_madt));
 	acpi_apic *end = (acpi_apic *)((uint8 *)madt + madt->header.length);
@@ -108,7 +108,7 @@ smp_do_acpi_config(void)
 
 			case ACPI_MADT_IO_APIC: {
 				acpi_io_apic *ioApic = (acpi_io_apic *)apic;
-				TRACE(("smp: found io APIC with id %u and address 0x%lx\n",
+				TRACE(("smp: found io APIC with id %" B_PRIu32 " and address 0x%" B_PRIx32 "\n",
 					ioApic->io_apic_id, ioApic->io_apic_address));
 				if (gKernelArgs.arch_args.ioapic_phys == 0)
 					gKernelArgs.arch_args.ioapic_phys = ioApic->io_apic_address;
@@ -157,7 +157,7 @@ calculate_apic_timer_conversion_factor(void)
 	gKernelArgs.arch_args.apic_time_cv_factor
 		= (uint32)((1000000.0/(t2 - t1)) * count);
 
-	TRACE(("APIC ticks/sec = %ld\n",
+	TRACE(("APIC ticks/sec = %" B_PRId32 "\n",
 		gKernelArgs.arch_args.apic_time_cv_factor));
 }
 
@@ -199,7 +199,7 @@ smp_init_other_cpus(void)
 	if (gKernelArgs.arch_args.apic_phys == 0)
 		return;
 
-	TRACE(("smp: found %ld cpu%s\n", gKernelArgs.num_cpus,
+	TRACE(("smp: found %" B_PRId32 " cpu%s\n", gKernelArgs.num_cpus,
 		gKernelArgs.num_cpus != 1 ? "s" : ""));
 	TRACE(("smp: apic_phys = %p\n", (void *)gKernelArgs.arch_args.apic_phys));
 	TRACE(("smp: ioapic_phys = %p\n",

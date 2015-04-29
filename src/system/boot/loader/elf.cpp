@@ -84,14 +84,22 @@ struct ELF32Class {
 		if (status != B_OK)
 			return status;
 
+#ifdef _BOOT_PLATFORM_efi
+		*_mappedAddress = (void*)((uint64)_address);
+#else
 		*_mappedAddress = (void*)*_address;
+#endif
 		return B_OK;
 	}
 
 	static inline void*
 	Map(AddrType address)
 	{
+#ifdef _BOOT_PLATFORM_efi
+		return (void*)((uint64)address);
+#else
 		return (void*)address;
+#endif
 	}
 };
 
@@ -669,7 +677,6 @@ elf_load_image(int fd, preloaded_image** _image)
 			return status;
 	}
 #endif
-
 	if (gKernelArgs.kernel_image == NULL
 		|| gKernelArgs.kernel_image->elf_class == ELFCLASS32) {
 		status = ELF32Loader::Create(fd, _image);

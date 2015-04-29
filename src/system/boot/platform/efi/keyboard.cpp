@@ -13,6 +13,7 @@
 /*!	Note, checking for keys doesn't seem to work in graphics
 	mode, at least in Bochs.
 */
+#if false
 static uint16
 check_for_key(void)
 {
@@ -20,7 +21,7 @@ check_for_key(void)
 	return (kSystemTable->ConIn->ReadKeyStroke(kSystemTable->ConIn, &key) ==
 		EFI_NOT_READY) ? 0 : key.UnicodeChar;
 }
-
+#endif
 
 extern "C" void
 clear_key_buffer(void)

@@ -5,8 +5,6 @@
 #	error This file is included from <boot/stage2_args.h> only
 #endif
 
-#warning EFI: IMPLEMENT platform_stage2_args.h
-
 struct platform_stage2_args {
 };
 

@@ -17,12 +17,6 @@
 
 #define _PACKED __attribute__((packed))
 
-#ifdef _BOOT_PLATFORM_efi
-typedef uint64 physical_addr_t;
-#else
-typedef uint32 physical_addr_t;
-#endif
-
 // kernel args
 typedef struct {
 	// architecture specific
@@ -36,9 +30,9 @@ typedef struct {
 	uint64	page_hole;
 	// smp stuff
 	uint32	apic_time_cv_factor; // apic ticks per second
-	physical_addr_t	apic_phys;
+	phys_addr_t	apic_phys;
 	FixedWidthPointer<void> apic;
-	physical_addr_t	ioapic_phys;
+	phys_addr_t	ioapic_phys;
 	uint32	cpu_apic_id[SMP_MAX_CPUS];
 	uint32	cpu_apic_version[SMP_MAX_CPUS];
 	// hpet stuff

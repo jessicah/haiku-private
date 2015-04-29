@@ -12,13 +12,6 @@
 #include <boot/platform/generic/text_menu.h>
 
 
-static void
-warm_reboot(char key)
-{
-	kRuntimeServices->ResetSystem(EfiResetWarm, 0, 0, NULL);
-}
-
-
 void
 platform_add_menus(Menu *menu)
 {

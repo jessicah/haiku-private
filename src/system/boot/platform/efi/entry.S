@@ -7,7 +7,6 @@
 
 #include <asm_defs.h>
 
-#define __x86_64__
 #include <arch/x86/descriptors.h>
 
 #include "mmu.h"

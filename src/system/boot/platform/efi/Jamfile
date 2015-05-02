@@ -9,7 +9,7 @@ UsePrivateHeaders [ FDirName kernel boot platform efi arch $(TARGET_ARCH) ] ;
 	local defines = _BOOT_MODE GNU_EFI_USE_MS_ABI _BOOT_PLATFORM_efi ;
 	defines = [ FDefines $(defines) ] ;
 	SubDirCcFlags $(defines) ;
-	SubDirC++Flags $(defines) -fno-rtti ;
+	SubDirC++Flags $(defines) -fno-rtti -std=gnu++11 ;
 }
 
 local efi_glue_src =
@@ -35,6 +35,7 @@ BootMergeObject boot_platform_efi.o :
 	hpet.cpp
 	cpu.cpp
 	smp.cpp
+	smp_trampoline.S
 	support.S
 	$(efi_glue_src)
 	:

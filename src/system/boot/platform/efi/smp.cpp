@@ -16,6 +16,7 @@
 
 #include <kernel.h>
 #include <safemode.h>
+#include <boot/platform.h>
 #include <boot/stage2.h>
 #include <boot/menu.h>
 #include <arch/x86/apic.h>
@@ -42,8 +43,32 @@
 extern "C" void execute_n_instructions(int count);
 
 extern "C" void smp_trampoline(void);
+extern "C" void smp_trampoline_args(void);
 extern "C" void smp_trampoline_end(void);
 
+struct gdtr {
+    uint16 limit;
+    uint32 base;
+    unsigned char null[8];
+    unsigned char code[8];
+    unsigned char data[8];
+} __attribute__((packed));
+
+// Arguments passed to the SMP trampoline.
+struct trampoline_args {
+	uint32 trampoline;        // Trampoline address
+	uint32 gdt32;             // 32-bit GDTR
+	uint32 pml4;              // 64-bit PML4
+	uint32 gdt64;             // 64-bit GDTR
+	uint64 kernel_entry;      // Kernel entry point
+	uint64 kernel_args;       // Kernel arguments
+	uint64 current_cpu;       // CPU number
+	uint64 stack_top;         // Kernel stack
+	volatile uint64 sentinel; // Sentinel, AP sets to 0 when finished
+
+    // smp_boot_other_cpus puts the GDTR here.
+    struct gdtr gdtr;
+};
 
 static uint32
 apic_read(uint32 offset)
@@ -217,21 +242,21 @@ smp_init_other_cpus(void)
 	if (gKernelArgs.num_cpus < 2)
 		return;
 
-#if false
 	for (uint32 i = 1; i < gKernelArgs.num_cpus; i++) {
 		// create a final stack the trampoline code will put the ap processor on
-		gKernelArgs.cpu_kstack[i].start = (addr_t)mmu_allocate(NULL,
-			KERNEL_STACK_SIZE + KERNEL_STACK_GUARD_PAGES * B_PAGE_SIZE);
-		gKernelArgs.cpu_kstack[i].size = KERNEL_STACK_SIZE
-			+ KERNEL_STACK_GUARD_PAGES * B_PAGE_SIZE;
+		void * stack = NULL;
+		const size_t size = KERNEL_STACK_SIZE + KERNEL_STACK_GUARD_PAGES * B_PAGE_SIZE;
+		if (platform_allocate_region(&stack, size, 0, false) != B_OK) {
+			panic("Unable to allocate AP stack");
+		}
+		memset(stack, 0, size);
+		gKernelArgs.cpu_kstack[i].start = (uint64)stack;
+		gKernelArgs.cpu_kstack[i].size = size;
 	}
-#endif
 }
 
-
-#if false
 void
-smp_boot_other_cpus(void (*entryFunc)(void))
+smp_boot_other_cpus(uint32 pml4, uint32 gdt64, uint64 kernel_entry)
 {
 	if (gKernelArgs.num_cpus < 2)
 		return;
@@ -245,55 +270,41 @@ smp_boot_other_cpus(void (*entryFunc)(void))
 	// (these have to be < 1M physical, 0xa0000-0xfffff is reserved by the BIOS,
 	// and when PXE services are used, the 0x8d000-0x9ffff is also reserved)
 #ifdef _PXE_ENV
-	uint32 trampolineCode = 0x8b000;
-	uint32 trampolineStack = 0x8c000;
+	uint64 trampolineCode = 0x8b000;
+	uint64 trampolineStack = 0x8c000;
 #else
-	uint32 trampolineCode = 0x9f000;
-	uint32 trampolineStack = 0x9e000;
+	uint64 trampolineCode = 0x9f000;
+	uint64 trampolineStack = 0x9e000;
 #endif
 
 	// copy the trampoline code over
 	memcpy((char *)trampolineCode, (const void*)&smp_trampoline,
-		(uint32)&smp_trampoline_end - (uint32)&smp_trampoline);
+		(uint64)&smp_trampoline_end - (uint64)&smp_trampoline);
 
 	// boot the cpus
 	for (uint32 i = 1; i < gKernelArgs.num_cpus; i++) {
-		uint32 *finalStack;
-		uint32 *tempStack;
 		uint32 config;
-		uint32 numStartups;
+		uint64 numStartups;
 		uint32 j;
+		trampoline_args * args = (trampoline_args *)trampolineStack;
+		args->trampoline = trampolineCode;
+		args->gdt32 = (uint64) &args->gdtr;
+		args->gdtr = {23, (uint32)(uint64)args->gdtr.null,
+					  {0, 0, 0, 0, 0, 0, 0, 0},
+					  {0xff, 0xff, 0, 0, 0, 0x9a, 0xcf, 0},
+					  {0xff, 0xff, 0, 0, 0, 0x92, 0xcf, 0}};
+		args->pml4 = pml4;
+		args->gdt64 = gdt64;
+		args->kernel_entry = kernel_entry;
+		args->kernel_args = (uint64)&gKernelArgs;
+		args->current_cpu = i;
+		args->stack_top = gKernelArgs.cpu_kstack[i].start + gKernelArgs.cpu_kstack[i].size;
+		args->sentinel = 1;
 
-		// set this stack up
-		finalStack = (uint32 *)gKernelArgs.cpu_kstack[i].start;
-		memset((uint8*)finalStack + KERNEL_STACK_GUARD_PAGES * B_PAGE_SIZE, 0,
-			KERNEL_STACK_SIZE);
-		tempStack = (finalStack
-			+ (KERNEL_STACK_SIZE + KERNEL_STACK_GUARD_PAGES * B_PAGE_SIZE)
-				/ sizeof(uint32)) - 1;
-		*tempStack = (uint32)entryFunc;
-
-		// set the trampoline stack up
-		tempStack = (uint32 *)(trampolineStack + B_PAGE_SIZE - 4);
-		// final location of the stack
-		*tempStack = ((uint32)finalStack) + KERNEL_STACK_SIZE
-			+ KERNEL_STACK_GUARD_PAGES * B_PAGE_SIZE - sizeof(uint32);
-		tempStack--;
-		// page dir
-		*tempStack = x86_read_cr3() & 0xfffff000;
-
-		// put a gdt descriptor at the bottom of the stack
-		*((uint16 *)trampolineStack) = 0x18 - 1; // LIMIT
-		*((uint32 *)(trampolineStack + 2)) = trampolineStack + 8;
-
-		// construct a temporary gdt at the bottom
-		segment_descriptor* tempGDT
-			= (segment_descriptor*)&((uint32 *)trampolineStack)[2];
-		clear_segment_descriptor(&tempGDT[0]);
-		set_segment_descriptor(&tempGDT[1], 0, 0xffffffff, DT_CODE_READABLE,
-			DPL_KERNEL);
-		set_segment_descriptor(&tempGDT[2], 0, 0xffffffff, DT_DATA_WRITEABLE,
-			DPL_KERNEL);
+		// put the args in the right place
+		trampoline_args ** args_ptr =
+			(trampoline_args **)(trampolineStack + (uint64)smp_trampoline_args - (uint64)smp_trampoline);
+		*args_ptr = args;
 
 		/* clear apic errors */
 		if (gKernelArgs.arch_args.cpu_apic_version[i] & 0xf0) {
@@ -363,14 +374,12 @@ dprintf("wait for delivery\n");
 		// Wait for the trampoline code to clear the final stack location.
 		// This serves as a notification for us that it has loaded the address
 		// and it is safe for us to overwrite it to trampoline the next CPU.
-		tempStack++;
-		while (*tempStack != 0)
+		while (args->sentinel != 0)
 			spin(1000);
 	}
 
 	TRACE(("done trampolining\n"));
 }
-#endif
 
 
 void

@@ -267,7 +267,7 @@ platform_start_kernel(void)
 	// Update EFI, generate final kernel physical memory map, etc.
 	mmu_post_efi_setup(memory_map_size, memory_map, descriptor_size, descriptor_version);
 
-	//smp_boot_other_cpus(long_smp_start_kernel);
+	smp_boot_other_cpus(final_pml4, gLongGDT, gLongKernelEntry);
 
 	// Enter the kernel!
 	efi_enter_kernel(final_pml4,

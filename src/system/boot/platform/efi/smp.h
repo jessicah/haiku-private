@@ -19,7 +19,7 @@ extern "C" {
 
 extern void smp_init(void);
 extern void smp_init_other_cpus(void);
-extern void smp_boot_other_cpus(void (*entryFunc)(void));
+extern void smp_boot_other_cpus(uint32 pml4, uint32 gdt64, uint64 kernel_entry);
 
 extern int smp_get_current_cpu(void);
 

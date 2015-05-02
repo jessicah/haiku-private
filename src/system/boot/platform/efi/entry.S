@@ -25,7 +25,7 @@ FUNCTION(efi_enter_kernel):
 	movq	%rdi, %cr3
 
 	// Load 64-bit enabled GDT
-	lgdtq	long_gdtr(%rip)
+	lgdtq	gLongGDTR(%rip)
 
 	// Jump into the 64-bit code segment.
         push    $KERNEL_CODE_SELECTOR
@@ -62,7 +62,7 @@ FUNCTION(efi_enter_kernel):
 .data
 
 
-long_gdtr:
+SYMBOL(gLongGDTR):
 	.word	BOOT_GDT_SEGMENT_COUNT * 8 - 1
 SYMBOL(gLongGDT):
 	.quad	0

@@ -42,7 +42,8 @@ smp_trampoline_args:
 	movl   %eax,%cr0
 
 	pushl  $8
-	pushl  (trampoline_32 - smp_trampoline)(%ebx)
+	pushl  (trampoline_32 - smp_trampoline)(%ebx), %eax
+	pushl  %eax
 	.byte 0x66
 .code32
 	retf
@@ -85,7 +86,8 @@ trampoline_32:
 
 	// Jump into the 64-bit code segment.
 	pushl	$KERNEL_CODE_SELECTOR
-	pushl	(.Llmode - smp_trampoline)(%ebx)
+	pushl	(.Llmode - smp_trampoline)(%ebx), %eax
+	pushl	%eax
 	retf
 .align 8
 .code64

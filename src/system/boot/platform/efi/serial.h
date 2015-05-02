@@ -22,6 +22,8 @@ extern void serial_puts(const char *string, size_t size);
 extern void serial_disable(void);
 extern void serial_enable(void);
 
+extern void serial_switch_to_bios(void);
+
 #ifdef __cplusplus
 }
 #endif

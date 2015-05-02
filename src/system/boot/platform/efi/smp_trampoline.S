@@ -124,3 +124,4 @@ trampoline_32:
 
 	// Call the entry point.
 	call	*%rax
+smp_trampoline_end:

@@ -84,6 +84,20 @@ apic_write(uint32 offset, uint32 data)
 }
 
 
+static uint32
+apic_read_phys(uint32 offset)
+{
+	return *(volatile uint32 *)((addr_t)(void *)gKernelArgs.arch_args.apic_phys + offset);
+}
+
+
+static void
+apic_write_phys(uint32 offset, uint32 data)
+{
+	*(volatile uint32 *)((addr_t)(void *)gKernelArgs.arch_args.apic_phys + offset) = data;
+}
+
+
 static status_t
 smp_do_acpi_config(void)
 {
@@ -190,6 +204,29 @@ calculate_apic_timer_conversion_factor(void)
 //	#pragma mark -
 
 
+extern "C" status_t
+platform_bootloader_address_to_kernel_address(void *address, uint64_t *_result);
+
+/*! Convert a 32-bit address to a 64-bit address. */
+static inline uint64
+fix_address(uint64 address)
+{
+	uint64 result;
+	if (platform_bootloader_address_to_kernel_address((void *)address, &result) != B_OK)
+		return address;
+	else
+		return result;
+}
+
+template<typename Type>
+inline void
+fix_address(FixedWidthPointer<Type>& p)
+{
+	if (p != NULL)
+		p.SetTo(fix_address(p.Get()));
+}
+
+
 int
 smp_get_current_cpu(void)
 {
@@ -250,7 +287,7 @@ smp_init_other_cpus(void)
 			panic("Unable to allocate AP stack");
 		}
 		memset(stack, 0, size);
-		gKernelArgs.cpu_kstack[i].start = (uint64)stack;
+		gKernelArgs.cpu_kstack[i].start = fix_address((uint64_t)stack);
 		gKernelArgs.cpu_kstack[i].size = size;
 	}
 }
@@ -278,11 +315,15 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdt64, uint64 kernel_entry)
 #endif
 
 	// copy the trampoline code over
+	TRACE(("copying the trampoline code to %p from %p\n", (char*)trampolineCode, (const void*)&smp_trampoline));
+	TRACE(("size of trampoline code = %d bytes\n", (uint64)&smp_trampoline_end - (uint64)&smp_trampoline));
 	memcpy((char *)trampolineCode, (const void*)&smp_trampoline,
 		(uint64)&smp_trampoline_end - (uint64)&smp_trampoline);
 
 	// boot the cpus
+	TRACE(("we have %d CPUs to boot...\n", gKernelArgs.num_cpus - 1));
 	for (uint32 i = 1; i < gKernelArgs.num_cpus; i++) {
+		TRACE(("trampolining CPU %d\n", i));
 		uint32 config;
 		uint64 numStartups;
 		uint32 j;
@@ -303,47 +344,52 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdt64, uint64 kernel_entry)
 
 		// put the args in the right place
 		trampoline_args ** args_ptr =
-			(trampoline_args **)(trampolineStack + (uint64)smp_trampoline_args - (uint64)smp_trampoline);
+			(trampoline_args **)(trampolineCode + (uint64)smp_trampoline_args - (uint64)smp_trampoline);
 		*args_ptr = args;
 
 		/* clear apic errors */
+		dprintf("clear apic errors\n");
 		if (gKernelArgs.arch_args.cpu_apic_version[i] & 0xf0) {
-			apic_write(APIC_ERROR_STATUS, 0);
-			apic_read(APIC_ERROR_STATUS);
+			dprintf("write to apic\n");
+			dprintf("apic at %p (%p)\n", (void*)gKernelArgs.arch_args.apic, (void*)gKernelArgs.arch_args.apic_phys);
+			apic_write_phys(APIC_ERROR_STATUS, 0);
+			dprintf("read from apic\n");
+			apic_read_phys(APIC_ERROR_STATUS);
 		}
+		dprintf("done\n");
 
-//dprintf("assert INIT\n");
+dprintf("assert INIT\n");
 		/* send (aka assert) INIT IPI */
-		config = (apic_read(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
+		config = (apic_read_phys(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
 			| (gKernelArgs.arch_args.cpu_apic_id[i] << 24);
-		apic_write(APIC_INTR_COMMAND_2, config); /* set target pe */
-		config = (apic_read(APIC_INTR_COMMAND_1) & 0xfff00000)
+		apic_write_phys(APIC_INTR_COMMAND_2, config); /* set target pe */
+		config = (apic_read_phys(APIC_INTR_COMMAND_1) & 0xfff00000)
 			| APIC_TRIGGER_MODE_LEVEL | APIC_INTR_COMMAND_1_ASSERT
 			| APIC_DELIVERY_MODE_INIT;
-		apic_write(APIC_INTR_COMMAND_1, config);
+		apic_write_phys(APIC_INTR_COMMAND_1, config);
 
 dprintf("wait for delivery\n");
 		// wait for pending to end
-		while ((apic_read(APIC_INTR_COMMAND_1) & APIC_DELIVERY_STATUS) != 0)
+		while ((apic_read_phys(APIC_INTR_COMMAND_1) & APIC_DELIVERY_STATUS) != 0)
 			asm volatile ("pause;");
 
 dprintf("deassert INIT\n");
 		/* deassert INIT */
-		config = (apic_read(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
+		config = (apic_read_phys(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
 			| (gKernelArgs.arch_args.cpu_apic_id[i] << 24);
-		apic_write(APIC_INTR_COMMAND_2, config);
-		config = (apic_read(APIC_INTR_COMMAND_1) & 0xfff00000)
+		apic_write_phys(APIC_INTR_COMMAND_2, config);
+		config = (apic_read_phys(APIC_INTR_COMMAND_1) & 0xfff00000)
 			| APIC_TRIGGER_MODE_LEVEL | APIC_DELIVERY_MODE_INIT;
-		apic_write(APIC_INTR_COMMAND_1, config);
+		apic_write_phys(APIC_INTR_COMMAND_1, config);
 
 dprintf("wait for delivery\n");
 		// wait for pending to end
-		while ((apic_read(APIC_INTR_COMMAND_1) & APIC_DELIVERY_STATUS) != 0)
+		while ((apic_read_phys(APIC_INTR_COMMAND_1) & APIC_DELIVERY_STATUS) != 0)
 			asm volatile ("pause;");
-
+dprintf("spin a little\n");
 		/* wait 10ms */
 		spin(10000);
-
+dprintf("next phase...\n");
 		/* is this a local apic or an 82489dx ? */
 		numStartups = (gKernelArgs.arch_args.cpu_apic_version[i] & 0xf0)
 			? 2 : 0;
@@ -351,23 +397,23 @@ dprintf("num startups = %ld\n", numStartups);
 		for (j = 0; j < numStartups; j++) {
 			/* it's a local apic, so send STARTUP IPIs */
 dprintf("send STARTUP\n");
-			apic_write(APIC_ERROR_STATUS, 0);
+			apic_write_phys(APIC_ERROR_STATUS, 0);
 
 			/* set target pe */
-			config = (apic_read(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
+			config = (apic_read_phys(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
 				| (gKernelArgs.arch_args.cpu_apic_id[i] << 24);
-			apic_write(APIC_INTR_COMMAND_2, config);
+			apic_write_phys(APIC_INTR_COMMAND_2, config);
 
 			/* send the IPI */
-			config = (apic_read(APIC_INTR_COMMAND_1) & 0xfff0f800)
+			config = (apic_read_phys(APIC_INTR_COMMAND_1) & 0xfff0f800)
 				| APIC_DELIVERY_MODE_STARTUP | (trampolineCode >> 12);
-			apic_write(APIC_INTR_COMMAND_1, config);
+			apic_write_phys(APIC_INTR_COMMAND_1, config);
 
 			/* wait */
 			spin(200);
 
 dprintf("wait for delivery\n");
-			while ((apic_read(APIC_INTR_COMMAND_1) & APIC_DELIVERY_STATUS) != 0)
+			while ((apic_read_phys(APIC_INTR_COMMAND_1) & APIC_DELIVERY_STATUS) != 0)
 				asm volatile ("pause;");
 		}
 

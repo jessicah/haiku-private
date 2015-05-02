@@ -24,7 +24,7 @@
 #include <string.h>
 
 
-//#define TRACE_CPU
+#define TRACE_CPU
 #ifdef TRACE_CPU
 #	define TRACE(x) dprintf x
 #else
@@ -297,7 +297,7 @@ slower_sample:
 
 	gKernelArgs.arch_args.system_time_cv_factor = gTimeConversionFactor;
 	gKernelArgs.arch_args.cpu_clock_speed = clockSpeed;
-	//dprintf("factors: %lu %llu\n", gTimeConversionFactor, clockSpeed);
+	dprintf("factors: %lu %llu\n", gTimeConversionFactor, clockSpeed);
 
 	if (quickSampleCount > 1) {
 		dprintf("needed %" B_PRIu32 " quick samples for TSC calibration\n",
@@ -318,6 +318,27 @@ slower_sample:
 
 
 //	#pragma mark -
+
+
+#if false
+extern "C" bigtime_t
+system_time()
+{
+	bigtime_t timestamp = rdtsc();
+	timestamp *= gTimeConversionFactor;
+	timestamp /= 4294967296;
+	return timestamp;
+
+}
+#else
+extern "C" bigtime_t
+system_time()
+{
+	uint64 lo, hi;
+	asm("rdtsc": "=a"(lo), "=d"(hi));
+	return ((lo * gTimeConversionFactor) >> 32) + hi * gTimeConversionFactor;
+}
+#endif
 
 
 extern "C" void

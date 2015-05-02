@@ -9,7 +9,7 @@ UsePrivateHeaders [ FDirName kernel boot platform efi arch $(TARGET_ARCH) ] ;
 	local defines = _BOOT_MODE GNU_EFI_USE_MS_ABI _BOOT_PLATFORM_efi ;
 	defines = [ FDefines $(defines) ] ;
 	SubDirCcFlags $(defines) ;
-	SubDirC++Flags $(defines) -fno-rtti -std=gnu++11 ;
+	SubDirC++Flags $(defines) -fno-rtti ;
 }
 
 local efi_glue_src =

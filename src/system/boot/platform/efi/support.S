@@ -38,24 +38,3 @@ FUNCTION(execute_n_instructions):
 	loop	.again
 	ret
 
-FUNCTION(system_time):
-	/* load 64-bit factor into %eax (low), %edx (high) */
-	rdtsc		/* time in %edx,%eax */
-
-	push	%rbx
-	movl	gTimeConversionFactor(%rip), %ebx
-	movl	(%rbx), %ebx
-	movl	%edx, %ecx	/* save high half */
-	mull	%ebx 		/* truncate %eax, but keep %edx */
-	movl	%ecx, %eax
-	movl	%edx, %ecx	/* save high half of low */
-	mull	%ebx			/*, %eax*/
-	/* now compute  [%edx, %eax] + [%ecx], propagating carry */
-	xorl	%ebx, %ebx	/* need zero to propagate carry */
-	addl	%ecx, %eax
-	adc		%ebx, %edx
-	pop	%rbx
-	/* Convert to 64-bit result in rax. */
-	shlq    $32, %rdx
-	orq     %rdx, %rax
-	ret

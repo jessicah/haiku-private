@@ -264,6 +264,10 @@ platform_start_kernel(void)
 	// The console was provided by boot services, disable it.
 	stdout = NULL;
 
+	// Switch to BIOS serial output
+	serial_switch_to_bios();
+	dprintf("can we still serial debug?\n");
+
 	// Update EFI, generate final kernel physical memory map, etc.
 	mmu_post_efi_setup(memory_map_size, memory_map, descriptor_size, descriptor_version);
 

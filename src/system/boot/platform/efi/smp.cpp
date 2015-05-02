@@ -293,7 +293,7 @@ smp_init_other_cpus(void)
 }
 
 void
-smp_boot_other_cpus(uint32 pml4, uint32 gdt64, uint64 kernel_entry)
+smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 {
 	if (gKernelArgs.num_cpus < 2)
 		return;

@@ -76,7 +76,7 @@ dprintf_args(const char *format, va_list args)
 	serial_puts(buffer, length);
 
 	if (platform_boot_options() & BOOT_OPTION_DEBUG_OUTPUT)
-		fprintf(stderr, "%s", buffer);
+		puts(buffer);
 }
 
 

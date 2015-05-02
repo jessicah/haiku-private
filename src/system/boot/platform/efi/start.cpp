@@ -250,6 +250,7 @@ platform_start_kernel(void)
 	// A changing memory map shouldn't affect the generated page tables, as
 	// they only needed to know about the maximum address, not any specific entry.
 	dprintf("Calling ExitBootServices. So long, EFI!\n");
+puts("Calling ExitBootServices");
 	while (1) {
 		if (kBootServices->ExitBootServices(kImage, map_key) == EFI_SUCCESS) {
 			break;
@@ -264,6 +265,7 @@ platform_start_kernel(void)
 
 	// The console was provided by boot services, disable it.
 	stdout = NULL;
+	stderr = NULL;
 
 	// Switch to BIOS serial output
 	serial_switch_to_bios();
@@ -272,8 +274,9 @@ platform_start_kernel(void)
 	// Update EFI, generate final kernel physical memory map, etc.
 	mmu_post_efi_setup(memory_map_size, memory_map, descriptor_size, descriptor_version);
 
+puts("smp_boot_other cpus");
 	smp_boot_other_cpus(final_pml4, (uint32_t)(uint64_t)&gLongGDTR, gLongKernelEntry);
-
+puts("efi_enter_kernel");
 	// Enter the kernel!
 	efi_enter_kernel(final_pml4,
 			 gLongKernelEntry,
@@ -328,6 +331,7 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 	serial_enable();
 //	interrupts_init();
 	console_init();
+	sBootOptions |= BOOT_OPTION_DEBUG_OUTPUT;
 	cpu_init();
 //	mmu_init();
 	debug_init_post_mmu();

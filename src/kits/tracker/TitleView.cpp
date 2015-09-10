@@ -527,7 +527,9 @@ BColumnTitle::Draw(BView* view, bool pressed)
 	if (secondary
 		|| (fColumn->AttrHash() == fParent->PoseView()->PrimarySort())) {
 
-		BPoint center(loc.x - 6, roundf((bounds.top + bounds.bottom) / 2.0));
+		BPoint center(bounds.right - kTitleColumnLeftExtraMargin, roundf((bounds.top + bounds.bottom) / 2.0));
+		if (fColumn->Alignment() == B_ALIGN_RIGHT)
+			center.x = bounds.left + 1 + kTitleColumnLeftExtraMargin;
 		BPoint triangle[3];
 		if (fParent->PoseView()->ReverseSort()) {
 			triangle[0] = center + BPoint(-3.5, 1.5);

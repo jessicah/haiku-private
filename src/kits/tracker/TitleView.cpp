@@ -124,7 +124,7 @@ BTitleView::BTitleView(BPoseView* view)
 #endif
 
 	BFont font(be_plain_font);
-	font.SetSize(floorf(be_plain_font->Size() * 0.75f));
+	font.SetSize(be_plain_font->Size());
 	SetFont(&font);
 
 	font_height height;

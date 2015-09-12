@@ -133,17 +133,46 @@ mmu_generate_post_efi_page_tables(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *
 	return (uint64)pml4;
 }
 
+static const char* memory_types[] = {
+	"reserved",
+	"loader code",
+	"loader data",
+	"boot services code",
+	"boot services data",
+	"runtime services code",
+	"runtime services data",
+	"conventional",
+	"unusable",
+	"acpi reclaim",
+	"acpi nvs",
+	"mem-mapped io",
+	"mem-mapped io portspace",
+	"pal code",
+	NULL
+};
+
 // Called after EFI boot services exit.
 // Currently assumes that the memory map is sane... Sorted and no overlapping regions.
 void
 mmu_post_efi_setup(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *memory_map, UINTN descriptor_size, UINTN descriptor_version)
 {
 	// Add physical memory to the kernel args and update virtual addresses for EFI regions..
+	dprintf("entering mmu_post_efi_setup...\n");
 	addr_t addr = (addr_t)memory_map;
 	gKernelArgs.num_physical_memory_ranges = 0;
+	dprintf("%-33s   %8s   %8s   %4s   %-24s   %s\n",
+		"Start (P/V)", "# Pages", "Size", "Attr", "Type", "Action");
 	for (UINTN i = 0; i < memory_map_size / descriptor_size; ++i) {
 		EFI_MEMORY_DESCRIPTOR *entry = (EFI_MEMORY_DESCRIPTOR *)(addr + i * descriptor_size);
+		const char* action = "";
+		UINTN magnitude = 0;
+		char unit = ' ';
 		switch (entry->Type) {
+		case EfiReservedMemoryType:
+		case EfiMemoryMappedIO:
+		case EfiMemoryMappedIOPortSpace:
+			action = "skipped";
+			break;
 		case EfiLoaderCode:
 		case EfiLoaderData:
 		case EfiBootServicesCode:
@@ -157,27 +186,57 @@ mmu_post_efi_setup(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *memory_map, UIN
 				base = 0x100000;
 			if (end > (512ull * 1024 * 1024 * 1024))
 				end = 512ull * 1024 * 1024 * 1024;
-			if (base >= end)
+			if (base >= end) {
+				action = "ignored, <1MB or >512GB";
 				break;
+			}
 			uint64_t size = end - base;
+			magnitude = size;
+			while (magnitude > 1024) {
+				magnitude /= 1024;
+				switch (unit) {
+					case ' ': unit = 'k'; break;
+					case 'k': unit = 'M'; break;
+					case 'M': unit = 'G'; break;
+				}
+			}
 
 			insert_physical_memory_range(base, size);
+			action = "insert physical memory range";
 			// LoaderData memory is bootloader allocated memory, possibly
 			// containing the kernel or loaded drivers.
-			if (entry->Type == EfiLoaderData)
+			if (entry->Type == EfiLoaderData) {
 				insert_physical_allocated_range(base, size);
+				action = "insert allocated physical memory range";
+			}
 			break;
 		}
 		case EfiACPIReclaimMemory:
 			// ACPI reclaim -- physical memory we could actually use later
 			gKernelArgs.ignored_physical_memory += entry->NumberOfPages * 4096;
+			action = "ignored physical memory";
 			break;
 		case EfiRuntimeServicesCode:
 		case EfiRuntimeServicesData:
+		case EfiACPIMemoryNVS:
+		case EfiPalCode:
 			entry->VirtualStart = entry->PhysicalStart + 0xFFFFFF0000000000ull;
+			action = "created virtual mapping";
+			break;
+		default:
+			dprintf(" >>> unhandled entry type (%x) <<<\n", entry->Type);
 			break;
 		}
+		if (unit == ' ')
+			dprintf("%016lx/%016lx   %8ld   %8s      %01X   %-24s   %s\n",
+				entry->PhysicalStart, entry->VirtualStart, entry->NumberOfPages,
+				"", entry->Type, memory_types[entry->Type], action);
+		else
+			dprintf("%016lx/%016lx   %8ld   %7ld%c      %01X   %-24s   %s\n",
+				entry->PhysicalStart, entry->VirtualStart, entry->NumberOfPages,
+				magnitude, unit, entry->Type, memory_types[entry->Type], action);
 	}
+	dprintf("memory ranges setup done\n");
 
 	// Sort the address ranges.
 	sort_address_ranges(gKernelArgs.physical_memory_range,
@@ -186,11 +245,15 @@ mmu_post_efi_setup(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *memory_map, UIN
 		gKernelArgs.num_physical_allocated_ranges);
 	sort_address_ranges(gKernelArgs.virtual_allocated_range,
 		gKernelArgs.num_virtual_allocated_ranges);
+	dprintf("sorted the address ranges...\n");
 
 	// Switch EFI to virtual mode, using the kernel pmap.
 	// Something involving ConvertPointer might need to be done after this?
 	// http://wiki.phoenix.com/wiki/index.php/EFI_RUNTIME_SERVICES#SetVirtualAddressMap.28.29
-	kRuntimeServices->SetVirtualAddressMap(memory_map_size, descriptor_size, descriptor_version, memory_map);
+	dprintf("setting up the virtual address map...\n");
+	dprintf("address of dprintf: %p\n", (void*)&dprintf);
+	EFI_STATUS status = kRuntimeServices->SetVirtualAddressMap(memory_map_size, descriptor_size, descriptor_version, memory_map);
+	dprintf("status = %lx\n", status);
 }
 
 // As far as I know, EFI uses identity mapped memory, and we already have paging enabled

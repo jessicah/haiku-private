@@ -250,7 +250,6 @@ platform_start_kernel(void)
 	// A changing memory map shouldn't affect the generated page tables, as
 	// they only needed to know about the maximum address, not any specific entry.
 	dprintf("Calling ExitBootServices. So long, EFI!\n");
-puts("Calling ExitBootServices");
 	while (1) {
 		if (kBootServices->ExitBootServices(kImage, map_key) == EFI_SUCCESS) {
 			break;
@@ -269,15 +268,17 @@ puts("Calling ExitBootServices");
 
 	// Switch to BIOS serial output
 	serial_switch_to_bios();
-	dprintf("can we still serial debug?\n");
+	dprintf("welcome to legacy serial debugging! :p\n");
 
 	// Update EFI, generate final kernel physical memory map, etc.
+	dprintf("mmu_post_efi_setup...\n");
 	mmu_post_efi_setup(memory_map_size, memory_map, descriptor_size, descriptor_version);
 
-puts("smp_boot_other cpus");
+	dprintf("smp_boot_other_cpus...\n");
 	smp_boot_other_cpus(final_pml4, (uint32_t)(uint64_t)&gLongGDTR, gLongKernelEntry);
-puts("efi_enter_kernel");
+
 	// Enter the kernel!
+	dprintf("efi_enter_kernel...\n");
 	efi_enter_kernel(final_pml4,
 			 gLongKernelEntry,
 			 gKernelArgs.cpu_kstack[0].start + gKernelArgs.cpu_kstack[0].size);
@@ -331,7 +332,7 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 	serial_enable();
 //	interrupts_init();
 	console_init();
-	sBootOptions |= BOOT_OPTION_DEBUG_OUTPUT;
+	//sBootOptions |= BOOT_OPTION_DEBUG_OUTPUT;
 	cpu_init();
 //	mmu_init();
 	debug_init_post_mmu();

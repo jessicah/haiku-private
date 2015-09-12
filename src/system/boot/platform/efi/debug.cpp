@@ -74,9 +74,6 @@ dprintf_args(const char *format, va_list args)
 
 	syslog_write(buffer, length);
 	serial_puts(buffer, length);
-
-	if (platform_boot_options() & BOOT_OPTION_DEBUG_OUTPUT)
-		puts(buffer);
 }
 
 

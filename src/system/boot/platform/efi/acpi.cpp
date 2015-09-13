@@ -96,7 +96,7 @@ acpi_check_rsdt(acpi_rsdp* rsdp)
 	if (rsdp->revision > 0) {
 		length = rsdp->xsdt_length;
 		rsdt = (acpi_descriptor_header*)mmu_map_physical_memory(
-			(uint32)rsdp->xsdt_address, rsdp->xsdt_length, kDefaultPageFlags);
+			(uint32)rsdp->xsdt_address, rsdp->xsdt_length, EfiACPIReclaimMemory);
 		if (rsdt != NULL
 			&& strncmp(rsdt->signature, ACPI_XSDT_SIGNATURE, 4) != 0) {
 			mmu_free(rsdt, rsdp->xsdt_length);
@@ -112,7 +112,7 @@ acpi_check_rsdt(acpi_rsdp* rsdp)
 		// map and validate the root system description table
 		rsdt = (acpi_descriptor_header*)mmu_map_physical_memory(
 			rsdp->rsdt_address, sizeof(acpi_descriptor_header),
-			kDefaultPageFlags);
+			EfiACPIReclaimMemory);
 		if (rsdt == NULL) {
 			TRACE(("acpi: couldn't map rsdt header\n"));
 			return B_ERROR;
@@ -129,7 +129,7 @@ acpi_check_rsdt(acpi_rsdp* rsdp)
 		TRACE(("acpi: rsdt length: %u\n", length));
 		mmu_free(rsdt, sizeof(acpi_descriptor_header));
 		rsdt = (acpi_descriptor_header*)mmu_map_physical_memory(
-			rsdp->rsdt_address, length, kDefaultPageFlags);
+			rsdp->rsdt_address, length, EfiACPIReclaimMemory);
 	}
 
 	if (rsdt != NULL) {
@@ -180,7 +180,7 @@ acpi_find_table_generic(const char* signature, acpi_descriptor_header* acpiSdt)
 	acpi_descriptor_header* header = NULL;
 	for (int32 j = 0; j < sNumEntries; j++, pointer++) {
 		header = (acpi_descriptor_header*)mmu_map_physical_memory((uint32)*pointer,
-			sizeof(acpi_descriptor_header), kDefaultPageFlags);
+			sizeof(acpi_descriptor_header), EfiACPIReclaimMemory);
 
 		if (header == NULL
 			|| strncmp(header->signature, signature, 4) != 0) {
@@ -209,7 +209,7 @@ acpi_find_table_generic(const char* signature, acpi_descriptor_header* acpiSdt)
 	mmu_free(header, sizeof(acpi_descriptor_header));
 
 	return (acpi_descriptor_header*)mmu_map_physical_memory(
-		(uint32)*pointer, length, kDefaultPageFlags);
+		(uint32)*pointer, length, EfiACPIReclaimMemory);
 }
 
 

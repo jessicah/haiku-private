@@ -269,7 +269,7 @@ smp_init_other_cpus(void)
 
 	// map in the apic
 	gKernelArgs.arch_args.apic = (void *)mmu_map_physical_memory(
-		gKernelArgs.arch_args.apic_phys, B_PAGE_SIZE, kDefaultPageFlags);
+		gKernelArgs.arch_args.apic_phys, B_PAGE_SIZE, EfiACPIReclaimMemory);
 
 	TRACE(("smp: apic (mapped) = %p\n", (void *)gKernelArgs.arch_args.apic));
 

@@ -27,7 +27,7 @@ static const uint64 kPageMappingFlags = 0x103;      // present, R/W, user, globa
 extern "C" {
 #endif
 
-extern addr_t mmu_map_physical_memory(addr_t physicalAddress, size_t size, uint32 flags);
+extern addr_t mmu_map_physical_memory(addr_t physicalAddress, size_t size, EFI_MEMORY_TYPE flags);
 
 extern void
 mmu_post_efi_setup(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *memory_map, UINTN descriptor_size, UINTN descriptor_version);

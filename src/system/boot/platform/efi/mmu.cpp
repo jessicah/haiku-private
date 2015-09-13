@@ -317,7 +317,7 @@ platform_allocate_region(void **_address, size_t size, uint8 /* protection */, b
 	have the same "misalignment".
 */
 extern "C" addr_t
-mmu_map_physical_memory(addr_t physicalAddress, size_t size, uint32 flags)
+mmu_map_physical_memory(addr_t physicalAddress, size_t size, EFI_MEMORY_TYPE flags)
 {
 	addr_t pageOffset = physicalAddress & (B_PAGE_SIZE - 1);
 
@@ -335,6 +335,17 @@ mmu_map_physical_memory(addr_t physicalAddress, size_t size, uint32 flags)
 	// that there's nothing that can be done to fix it.
 	if (physicalAddress + size > (512ull * 1024 * 1024 * 1024))
 		panic("Can't currently support more than 512GB of RAM!");
+
+	EFI_STATUS status =
+		kBootServices->AllocatePages(AllocateAddress, flags, aligned_size / B_PAGE_SIZE, &physicalAddress);
+	if (status != EFI_SUCCESS) {
+		EFI_STATUS status2 =
+			kBootServices->AllocatePages(AllocateAddress, EfiLoaderData, aligned_size / B_PAGE_SIZE, &physicalAddress);
+		if (status2 != EFI_SUCCESS)
+			dprintf("mmu_map_physical_memory: AllocatePages w/EfiLoaderData failed: %x\n", status2);
+		else
+			dprintf("mmu_map_physical_memory: AllocatePages failed: %x\n", status);
+	}
 
 	region->next = allocated_memory_regions;
 	allocated_memory_regions = region;

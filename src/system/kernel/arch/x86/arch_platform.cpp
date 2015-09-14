@@ -41,4 +41,3 @@ arch_platform_init_post_thread(struct kernel_args *args)
 #endif
 	return B_OK;
 }
-

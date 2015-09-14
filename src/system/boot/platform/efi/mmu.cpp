@@ -319,6 +319,8 @@ platform_allocate_region(void **_address, size_t size, uint8 /* protection */, b
 extern "C" addr_t
 mmu_map_physical_memory(addr_t physicalAddress, size_t size, EFI_MEMORY_TYPE flags)
 {
+	return physicalAddress;
+	#if false
 	addr_t pageOffset = physicalAddress & (B_PAGE_SIZE - 1);
 
 	physicalAddress -= pageOffset;
@@ -336,15 +338,19 @@ mmu_map_physical_memory(addr_t physicalAddress, size_t size, EFI_MEMORY_TYPE fla
 	if (physicalAddress + size > (512ull * 1024 * 1024 * 1024))
 		panic("Can't currently support more than 512GB of RAM!");
 
+	dprintf("mmu_map_physical_memory: AllocatePages @ %lx, %u pages\n", physicalAddress, aligned_size / B_PAGE_SIZE);
 	EFI_STATUS status =
-		kBootServices->AllocatePages(AllocateAddress, flags, aligned_size / B_PAGE_SIZE, &physicalAddress);
+		kBootServices->AllocatePages(AllocateAddress, EfiACPIReclaimMemory, aligned_size / B_PAGE_SIZE, &physicalAddress);
 	if (status != EFI_SUCCESS) {
-		EFI_STATUS status2 =
-			kBootServices->AllocatePages(AllocateAddress, EfiLoaderData, aligned_size / B_PAGE_SIZE, &physicalAddress);
-		if (status2 != EFI_SUCCESS)
-			dprintf("mmu_map_physical_memory: AllocatePages w/EfiLoaderData failed: %x\n", status2);
-		else
-			dprintf("mmu_map_physical_memory: AllocatePages failed: %x\n", status);
+		dprintf("EfiACPIReclaimMemory = %lX\n", status);
+		status = kBootServices->AllocatePages(AllocateAddress, EfiLoaderData, aligned_size / B_PAGE_SIZE, &physicalAddress);
+		if (status != EFI_SUCCESS) {
+			dprintf("EfiLoaderData = %lX\n", status);
+		} else {
+			dprintf("EfiLoaderData = OK\n");
+		}
+	} else {
+		dprintf("EfiACPIReclaimMemory = OK\n");
 	}
 
 	region->next = allocated_memory_regions;
@@ -355,6 +361,7 @@ mmu_map_physical_memory(addr_t physicalAddress, size_t size, EFI_MEMORY_TYPE fla
 	region->released = false;
 
 	return physicalAddress + pageOffset;
+	#endif
 }
 
 static allocated_memory_region *

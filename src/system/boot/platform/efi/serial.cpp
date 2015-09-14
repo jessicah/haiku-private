@@ -136,6 +136,9 @@ serial_init(void)
 #ifdef ENABLE_SERIAL
 	serial_enable();
 #endif
+
+	// just don't use EFI at all...? :p
+	serial_switch_to_bios();
 }
 
 

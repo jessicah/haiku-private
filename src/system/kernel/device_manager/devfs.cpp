@@ -224,7 +224,7 @@ scan_for_drivers_if_needed(devfs_vnode* dir)
 	get_device_name(dir, path.LockBuffer(), path.BufferSize());
 	path.UnlockBuffer();
 
-	TRACE(("scan_for_drivers_if_needed: mode %ld: %s\n", scan_mode(),
+	TRACE(("scan_for_drivers_if_needed: mode %" B_PRId32" : %s\n", scan_mode(),
 		path.Path()));
 
 	// scan for drivers at this path
@@ -471,7 +471,7 @@ add_partition(struct devfs* fs, struct devfs_vnode* device, const char* name,
 	fs->vnode_hash->Insert(partitionNode);
 	devfs_insert_in_dir(device->parent, partitionNode);
 
-	TRACE(("add_partition(name = %s, offset = %Ld, size = %Ld)\n",
+	TRACE(("add_partition(name = %s, offset = %" B_PRIdOFF ", size = %" B_PRIdOFF ")\n",
 		name, info.offset, info.size));
 	return B_OK;
 
@@ -1028,7 +1028,7 @@ devfs_get_vnode(fs_volume* _volume, ino_t id, fs_vnode* _vnode, int* _type,
 {
 	struct devfs* fs = (struct devfs*)_volume->private_volume;
 
-	TRACE(("devfs_get_vnode: asking for vnode id = %Ld, vnode = %p, r %d\n", id, _vnode, reenter));
+	TRACE(("devfs_get_vnode: asking for vnode id = %" B_PRId64 ", vnode = %p, r %d\n", id, _vnode, reenter));
 
 	RecursiveLocker _(fs->lock);
 
@@ -1052,7 +1052,7 @@ devfs_put_vnode(fs_volume* _volume, fs_vnode* _vnode, bool reenter)
 #ifdef TRACE_DEVFS
 	struct devfs_vnode* vnode = (struct devfs_vnode*)_vnode->private_node;
 
-	TRACE(("devfs_put_vnode: entry on vnode %p, id = %Ld, reenter %d\n",
+	TRACE(("devfs_put_vnode: entry on vnode %p, id = %" B_PRId64 ", reenter %d\n",
 		vnode, vnode->id, reenter));
 #endif
 
@@ -1066,7 +1066,7 @@ devfs_remove_vnode(fs_volume* _volume, fs_vnode* _v, bool reenter)
 	struct devfs* fs = (struct devfs*)_volume->private_volume;
 	struct devfs_vnode* vnode = (struct devfs_vnode*)_v->private_node;
 
-	TRACE(("devfs_removevnode: remove %p (%Ld), reenter %d\n", vnode, vnode->id, reenter));
+	TRACE(("devfs_removevnode: remove %p (%" B_PRId64 "), reenter %d\n", vnode, vnode->id, reenter));
 
 	RecursiveLocker locker(&fs->lock);
 
@@ -1418,7 +1418,7 @@ devfs_ioctl(fs_volume* _volume, fs_vnode* _vnode, void* _cookie, uint32 op,
 	struct devfs_vnode* vnode = (struct devfs_vnode*)_vnode->private_node;
 	struct devfs_cookie* cookie = (struct devfs_cookie*)_cookie;
 
-	TRACE(("devfs_ioctl: vnode %p, cookie %p, op %ld, buf %p, len %ld\n",
+	TRACE(("devfs_ioctl: vnode %p, cookie %p, op %" B_PRId32 ", buf %p, len %" B_PRIuSIZE "\n",
 		vnode, cookie, op, buffer, length));
 
 	// we are actually checking for a *device* here, we don't make the
@@ -1713,7 +1713,7 @@ static status_t
 devfs_io(fs_volume* volume, fs_vnode* _vnode, void* _cookie,
 	io_request* request)
 {
-	TRACE(("[%ld] devfs_io(request: %p)\n", find_thread(NULL), request));
+	TRACE(("[%" B_PRId32 "] devfs_io(request: %p)\n", find_thread(NULL), request));
 
 	devfs_vnode* vnode = (devfs_vnode*)_vnode->private_node;
 	devfs_cookie* cookie = (devfs_cookie*)_cookie;
@@ -1756,7 +1756,7 @@ devfs_read_stat(fs_volume* _volume, fs_vnode* _vnode, struct stat* stat)
 {
 	struct devfs_vnode* vnode = (struct devfs_vnode*)_vnode->private_node;
 
-	TRACE(("devfs_read_stat: vnode %p (%Ld), stat %p\n", vnode, vnode->id,
+	TRACE(("devfs_read_stat: vnode %p (%" B_PRId64 "), stat %p\n", vnode, vnode->id,
 		stat));
 
 	stat->st_ino = vnode->id;
@@ -1809,7 +1809,7 @@ devfs_write_stat(fs_volume* _volume, fs_vnode* _vnode, const struct stat* stat,
 	struct devfs* fs = (struct devfs*)_volume->private_volume;
 	struct devfs_vnode* vnode = (struct devfs_vnode*)_vnode->private_node;
 
-	TRACE(("devfs_write_stat: vnode %p (0x%Lx), stat %p\n", vnode, vnode->id,
+	TRACE(("devfs_write_stat: vnode %p (0x%" B_PRIx64 "), stat %p\n", vnode, vnode->id,
 		stat));
 
 	// we cannot change the size of anything
@@ -2031,7 +2031,7 @@ devfs_publish_partition(const char* name, const partition_info* info)
 {
 	if (name == NULL || info == NULL)
 		return B_BAD_VALUE;
-	TRACE(("publish partition: %s (device \"%s\", offset %Ld, size %Ld)\n",
+	TRACE(("publish partition: %s (device \"%s\", offset %" B_PRIdOFF ", size %" B_PRIdOFF ")\n",
 		name, info->device, info->offset, info->size));
 
 	devfs_vnode* device;

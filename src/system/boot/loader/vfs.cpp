@@ -709,7 +709,6 @@ mount_file_systems(stage2_args *args)
 	}
 
 	// add all block devices the platform has for us
-
 	status_t status = platform_add_block_devices(args, &gBootDevices);
 	if (status < B_OK)
 		return status;

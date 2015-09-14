@@ -372,7 +372,7 @@ kernel_args_malloc(size_t size)
 
 #ifdef _BOOT_PLATFORM_efi
 		uint64 translated_block;
-		platform_bootloader_address_to_kernel_address(block, &translated_block);
+		platform_convert_to_kernel_address(block, &translated_block);
 		if (add_kernel_args_range((void *)translated_block, size) != B_OK)
 			panic("kernel_args max range too low!\n");
 #else
@@ -394,7 +394,7 @@ kernel_args_malloc(size_t size)
 	sFree = kChunkSize - size;
 #ifdef _BOOT_PLATFORM_efi
 	uint64 translated_block;
-	platform_bootloader_address_to_kernel_address(block, &translated_block);
+	platform_convert_to_kernel_address(block, &translated_block);
 	if (add_kernel_args_range((void *)translated_block, kChunkSize) != B_OK)
 		panic("kernel_args max range too low!\n");
 #else

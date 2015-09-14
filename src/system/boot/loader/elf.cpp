@@ -134,7 +134,7 @@ struct ELF64Class {
 			return status;
 
 		*_mappedAddress = address;
-		platform_bootloader_address_to_kernel_address(address, _address);
+		platform_convert_to_kernel_address(address, _address);
 		return B_OK;
 	}
 
@@ -142,7 +142,7 @@ struct ELF64Class {
 	Map(AddrType address)
 	{
 		void *result;
-		if (platform_kernel_address_to_bootloader_address(address, &result) != B_OK) {
+		if (platform_convert_to_loader_address(address, &result) != B_OK) {
 			panic("Couldn't convert address %#lx", address);
 		}
 		return result;
@@ -261,7 +261,8 @@ ELFLoader<Class>::Load(int fd, preloaded_image* _image)
 				// known but unused type
 				continue;
 			default:
-				dprintf("unhandled pheader type 0x%" B_PRIx32 "\n", header.p_type);
+				dprintf("unhandled pheader type 0x%" B_PRIx32 "\n",
+					header.p_type);
 				continue;
 		}
 

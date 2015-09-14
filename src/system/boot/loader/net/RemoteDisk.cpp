@@ -169,7 +169,8 @@ RemoteDisk::GetName(char *nameBuffer, size_t bufferSize) const
 	if (!nameBuffer)
 		return B_BAD_VALUE;
 
-	snprintf(nameBuffer, bufferSize, "RemoteDisk:%" B_PRId32 ".%" B_PRId32 ".%" B_PRId32 ".%" B_PRId32 ":%" B_PRId16 "",
+	snprintf(nameBuffer, bufferSize, "RemoteDisk:" \
+		"%" B_PRId32 ".%" B_PRId32 ".%" B_PRId32 ".%" B_PRId32 ":%" B_PRId16 "",
 		(fServerAddress >> 24) & 0xff, (fServerAddress >> 16) & 0xff,
 		(fServerAddress >> 8) & 0xff, fServerAddress & 0xff, fServerPort);
 

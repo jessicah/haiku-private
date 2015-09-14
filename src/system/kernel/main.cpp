@@ -59,7 +59,7 @@
 #include "vm/VMAnonymousCache.h"
 
 
-#define TRACE_BOOT
+//#define TRACE_BOOT
 #ifdef TRACE_BOOT
 #	define TRACE(x...) dprintf("INIT: " x)
 #else
@@ -310,9 +310,7 @@ main2(void* /*unused*/)
 	/* bootstrap all the filesystems */
 	TRACE("Bootstrap file systems\n");
 	boot_splash_set_stage(BOOT_SPLASH_STAGE_2_BOOTSTRAP_FS);
-	gBootDevice = -1;
 	vfs_bootstrap_file_systems();
-	gBootDevice = -1;
 
 	TRACE("Init Device Manager\n");
 	boot_splash_set_stage(BOOT_SPLASH_STAGE_3_INIT_DEVICES);

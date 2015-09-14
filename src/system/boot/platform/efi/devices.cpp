@@ -228,8 +228,11 @@ find_unique_check_sums(NodeList *devices)
 static status_t
 add_block_devices(NodeList *devicesList, bool identifierMissing) // should bool be a reference?
 {
-	if (sBlockDevicesAdded)
+	dprintf("add_block_devices\n");
+	if (sBlockDevicesAdded) {
+		dprintf("exit\n");
 		return B_OK;
+	}
 
 	EFI_BLOCK_IO *blockIO;
 	EFI_DEVICE_PATH *devicePath, *node;
@@ -241,30 +244,50 @@ add_block_devices(NodeList *devicesList, bool identifierMissing) // should bool 
 	handles = NULL;
 
 	status = kBootServices->LocateHandle(ByProtocol, &sBlockIOGuid, 0, &size, 0);
+	dprintf("1.");
 	if (status == EFI_BUFFER_TOO_SMALL) {
+		dprintf("2.");
 		handles = (EFI_HANDLE *)malloc(size);
+		dprintf("3.");
 		status = kBootServices->LocateHandle(ByProtocol, &sBlockIOGuid, 0, &size, handles);
-		if (status != EFI_SUCCESS)
+		dprintf("4.");
+		if (status != EFI_SUCCESS) {
+			dprintf("5.");
 			free(handles);
+		}
 	}
-	if (status != EFI_SUCCESS)
+	if (status != EFI_SUCCESS) {
+		dprintf("exit2\n");
 		return B_ERROR;
+	}
 
+	dprintf("6.");
 	for (unsigned int n = 0; n < size / sizeof(EFI_HANDLE); n++) {
+		dprintf("7.");
 		status = kBootServices->HandleProtocol(handles[n], &sDevicePathGuid, (void **)&devicePath);
+		dprintf("8.");
 		if (status != EFI_SUCCESS)
 			continue;
 
 		node = devicePath;
 
-		while (!IsDevicePathEnd(NextDevicePathNode(node)))
+		dprintf("9.");
+		while (!IsDevicePathEnd(NextDevicePathNode(node))) {
+			dprintf("10.");
 			node = NextDevicePathNode(node);
+		}
 
+		dprintf("11.");
 		status = kBootServices->HandleProtocol(handles[n], &sBlockIOGuid, (void **)&blockIO);
-		if (status != EFI_SUCCESS)
+		dprintf("12.");
+		if (status != EFI_SUCCESS) {
+			dprintf("13.");
 			continue;
-		if (blockIO->Media->LogicalPartition == false)
+		}
+		if (blockIO->Media->LogicalPartition == false) {
+			dprintf("14.");
 			continue;
+		}
 
 		/* If we come across a logical partition of subtype CDROM
 		 * it doesn't refer to the CD filesystem itself, but rather
@@ -272,28 +295,41 @@ add_block_devices(NodeList *devicesList, bool identifierMissing) // should bool 
 		 * we try to find the parent device and add that instead as
 		 * that will be the CD fileystem.
 		 */
+		dprintf("15.");
 		if (DevicePathType(node) == MEDIA_DEVICE_PATH &&
-			DevicePathSubType(node) == MEDIA_CDROM_DP) {
+				DevicePathSubType(node) == MEDIA_CDROM_DP) {
+			dprintf("16.");
 			node->Type = END_DEVICE_PATH_TYPE;
 			node->SubType = END_ENTIRE_DEVICE_PATH_SUBTYPE;
-			status = kBootServices->LocateDevicePath(&sBlockIOGuid, &devicePath, &handle);
+			dprintf("16a. kBootServices->LocateDevicePath fails!\n");
+			//status = kBootServices->LocateDevicePath(&sBlockIOGuid, &devicePath, &handle);
+			dprintf("17.");
 			// TODO: actually care about CD-ROMs
 			continue;
 		}
 
+		dprintf("18.");
 		EFIBlockDevice *device = new(std::nothrow) EFIBlockDevice(blockIO);
+		dprintf("19.");
 		if (device->InitCheck() != B_OK) {
+			dprintf("20.");
 			delete device;
 			continue;
 		}
 
+		dprintf("21.");
 		devicesList->Add(device);
 
-		if (device->FillIdentifier() != B_OK)
+		dprintf("22.");
+		if (device->FillIdentifier() != B_OK) {
+			dprintf("23.");
 			identifierMissing = true;
+		}
 	}
 
+	dprintf("24.");
 	sBlockDevicesAdded = true;
+	dprintf("finished\n");
 	return B_OK;
 }
 
@@ -402,6 +438,7 @@ platform_get_boot_partition(struct stage2_args *args, Node *bootDevice,
 status_t
 platform_add_block_devices(stage2_args *args, NodeList *devicesList)
 {
+	dprintf("platform_add_block_devices\n");
 	return add_block_devices(devicesList, false);
 }
 

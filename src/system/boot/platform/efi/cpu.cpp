@@ -297,7 +297,7 @@ slower_sample:
 
 	gKernelArgs.arch_args.system_time_cv_factor = gTimeConversionFactor;
 	gKernelArgs.arch_args.cpu_clock_speed = clockSpeed;
-	dprintf("factors: %lu %llu\n", gTimeConversionFactor, clockSpeed);
+	dprintf("factors: %" B_PRIu32 " %" B_PRIu64 "\n", gTimeConversionFactor, clockSpeed);
 
 	if (quickSampleCount > 1) {
 		dprintf("needed %" B_PRIu32 " quick samples for TSC calibration\n",

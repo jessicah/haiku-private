@@ -252,6 +252,8 @@ platform_start_kernel(void)
 	dprintf("Calling ExitBootServices. So long, EFI!\n");
 	while (1) {
 		if (kBootServices->ExitBootServices(kImage, map_key) == EFI_SUCCESS) {
+			serial_switch_to_bios();
+			dprintf("welcome to legacy serial debugging! :p\n");
 			break;
 		}
 
@@ -266,10 +268,6 @@ platform_start_kernel(void)
 	stdout = NULL;
 	stderr = NULL;
 
-	// Switch to BIOS serial output
-	serial_switch_to_bios();
-	dprintf("welcome to legacy serial debugging! :p\n");
-
 	// Update EFI, generate final kernel physical memory map, etc.
 	dprintf("mmu_post_efi_setup...\n");
 	mmu_post_efi_setup(memory_map_size, memory_map, descriptor_size, descriptor_version);
@@ -279,6 +277,8 @@ platform_start_kernel(void)
 
 	// Enter the kernel!
 	dprintf("efi_enter_kernel...\n");
+	dprintf("kernel entry at %#lx\n", gLongKernelEntry);
+	dprintf("Kernel stack at %#lx\n", gKernelArgs.cpu_kstack[0].start);
 	efi_enter_kernel(final_pml4,
 			 gLongKernelEntry,
 			 gKernelArgs.cpu_kstack[0].start + gKernelArgs.cpu_kstack[0].size);

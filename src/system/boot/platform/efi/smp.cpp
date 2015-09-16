@@ -30,7 +30,8 @@
 #include "acpi.h"
 
 
-#define NO_SMP 0
+// See comments at the end of smp_boot_other_cpus()
+#define NO_SMP 1
 
 #define TRACE_SMP
 #ifdef TRACE_SMP
@@ -316,7 +317,7 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 
 	// copy the trampoline code over
 	TRACE(("copying the trampoline code to %p from %p\n", (char*)trampolineCode, (const void*)&smp_trampoline));
-	TRACE(("size of trampoline code = %d bytes\n", (uint64)&smp_trampoline_end - (uint64)&smp_trampoline));
+	TRACE(("size of trampoline code = %lu bytes\n", (uint64)&smp_trampoline_end - (uint64)&smp_trampoline));
 	memcpy((char *)trampolineCode, (const void*)&smp_trampoline,
 		(uint64)&smp_trampoline_end - (uint64)&smp_trampoline);
 
@@ -345,10 +346,11 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 		// put the args in the right place
 		uint32 * args_ptr =
 			(uint32 *)(trampolineCode + (uint64)smp_trampoline_args - (uint64)smp_trampoline);
+		dprintf("%d: trampoline args value = %x\n", i, *args_ptr);
 		*args_ptr = (uint32)(uint64)args;
 
 		/* clear apic errors */
-		dprintf("clear apic errors\n");
+		dprintf("%d: clear apic errors\n", i);
 		if (gKernelArgs.arch_args.cpu_apic_version[i] & 0xf0) {
 			dprintf("write to apic\n");
 			dprintf("apic at %p (%p)\n", (void*)gKernelArgs.arch_args.apic, (void*)gKernelArgs.arch_args.apic_phys);
@@ -358,7 +360,7 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 		}
 		dprintf("done\n");
 
-dprintf("assert INIT\n");
+		dprintf("%d: assert INIT\n", i);
 		/* send (aka assert) INIT IPI */
 		config = (apic_read_phys(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
 			| (gKernelArgs.arch_args.cpu_apic_id[i] << 24);
@@ -368,12 +370,12 @@ dprintf("assert INIT\n");
 			| APIC_DELIVERY_MODE_INIT;
 		apic_write_phys(APIC_INTR_COMMAND_1, config);
 
-dprintf("wait for delivery\n");
+		dprintf("%d: wait for delivery\n", i);
 		// wait for pending to end
 		while ((apic_read_phys(APIC_INTR_COMMAND_1) & APIC_DELIVERY_STATUS) != 0)
 			asm volatile ("pause;");
 
-dprintf("deassert INIT\n");
+		dprintf("%d: deassert INIT\n", i);
 		/* deassert INIT */
 		config = (apic_read_phys(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
 			| (gKernelArgs.arch_args.cpu_apic_id[i] << 24);
@@ -382,21 +384,22 @@ dprintf("deassert INIT\n");
 			| APIC_TRIGGER_MODE_LEVEL | APIC_DELIVERY_MODE_INIT;
 		apic_write_phys(APIC_INTR_COMMAND_1, config);
 
-dprintf("wait for delivery\n");
+		dprintf("%d: wait for delivery\n", i);
 		// wait for pending to end
 		while ((apic_read_phys(APIC_INTR_COMMAND_1) & APIC_DELIVERY_STATUS) != 0)
 			asm volatile ("pause;");
-dprintf("spin a little\n");
+		dprintf("%d: wait 10ms\n", i);
 		/* wait 10ms */
 		spin(10000);
-dprintf("next phase...\n");
+
+		dprintf("%d: send startup IPIs\n", i);
 		/* is this a local apic or an 82489dx ? */
 		numStartups = (gKernelArgs.arch_args.cpu_apic_version[i] & 0xf0)
 			? 2 : 0;
-dprintf("num startups = %ld\n", numStartups);
+		dprintf("%d: startups to send = %ld\n", i, numStartups);
 		for (j = 0; j < numStartups; j++) {
 			/* it's a local apic, so send STARTUP IPIs */
-dprintf("send STARTUP\n");
+			dprintf("%d:%d: send STARTUP\n", i, j);
 			apic_write_phys(APIC_ERROR_STATUS, 0);
 
 			/* set target pe */
@@ -412,16 +415,21 @@ dprintf("send STARTUP\n");
 			/* wait */
 			spin(200);
 
-dprintf("wait for delivery\n");
+			dprintf("%d:%d: wait for delivery\n", i, j);
 			while ((apic_read_phys(APIC_INTR_COMMAND_1) & APIC_DELIVERY_STATUS) != 0)
 				asm volatile ("pause;");
+			dprintf("%d:%d: startup IPI delivered\n", i, j);
 		}
 
 		// Wait for the trampoline code to clear the final stack location.
 		// This serves as a notification for us that it has loaded the address
 		// and it is safe for us to overwrite it to trampoline the next CPU.
-		while (args->sentinel != 0)
+		while (args->sentinel != 0) {
+			// On actual hardware, this is failing for some reason. Perhaps
+			// we need to use a better location for the trampoline code?
+			// Either way, it never succeeds, so defined NO_SMP for now.
 			spin(1000);
+		}
 	}
 
 	TRACE(("done trampolining\n"));

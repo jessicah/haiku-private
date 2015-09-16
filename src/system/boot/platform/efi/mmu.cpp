@@ -173,10 +173,14 @@ mmu_post_efi_setup(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *memory_map, UIN
 		case EfiMemoryMappedIOPortSpace:
 			action = "skipped";
 			break;
-		case EfiLoaderCode:
-		case EfiLoaderData:
 		case EfiBootServicesCode:
 		case EfiBootServicesData:
+		case EfiRuntimeServicesCode:
+		case EfiRuntimeServicesData:
+			// marking the above as usable memory, as we don't care about UEFI
+			// from now on...
+		case EfiLoaderCode:
+		case EfiLoaderData:
 		case EfiConventionalMemory: {
 			// Usable memory.
 			// Ignore memory below 1MB and above 512GB.
@@ -216,8 +220,6 @@ mmu_post_efi_setup(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *memory_map, UIN
 			gKernelArgs.ignored_physical_memory += entry->NumberOfPages * 4096;
 			action = "ignored physical memory";
 			break;
-		case EfiRuntimeServicesCode:
-		case EfiRuntimeServicesData:
 		case EfiACPIMemoryNVS:
 		case EfiPalCode:
 			entry->VirtualStart = entry->PhysicalStart + 0xFFFFFF0000000000ull;
@@ -250,10 +252,14 @@ mmu_post_efi_setup(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *memory_map, UIN
 	// Switch EFI to virtual mode, using the kernel pmap.
 	// Something involving ConvertPointer might need to be done after this?
 	// http://wiki.phoenix.com/wiki/index.php/EFI_RUNTIME_SERVICES#SetVirtualAddressMap.28.29
-	dprintf("setting up the virtual address map...\n");
-	dprintf("address of dprintf: %p\n", (void*)&dprintf);
-	EFI_STATUS status = kRuntimeServices->SetVirtualAddressMap(memory_map_size, descriptor_size, descriptor_version, memory_map);
-	dprintf("status = %lx\n", status);
+
+	// The call to SetVirtualAddressMap() fails on actual hardware; also note that
+	// the kernel panics if we add virtual mappings for the UEFI boot/runtime memory...
+	dprintf("skipping call to SetVirtualAddressMap(), as we've broken something here...\n");
+	dprintf("as a result, ALL UEFI services including runtime services will be unavailable\n");
+
+//	dprintf("setting up the virtual address map...\n");
+//	EFI_STATUS status = kRuntimeServices->SetVirtualAddressMap(memory_map_size, descriptor_size, descriptor_version, memory_map);
 }
 
 // As far as I know, EFI uses identity mapped memory, and we already have paging enabled
@@ -319,8 +325,6 @@ platform_allocate_region(void **_address, size_t size, uint8 /* protection */, b
 extern "C" addr_t
 mmu_map_physical_memory(addr_t physicalAddress, size_t size, EFI_MEMORY_TYPE flags)
 {
-	return physicalAddress;
-	#if false
 	addr_t pageOffset = physicalAddress & (B_PAGE_SIZE - 1);
 
 	physicalAddress -= pageOffset;
@@ -361,7 +365,6 @@ mmu_map_physical_memory(addr_t physicalAddress, size_t size, EFI_MEMORY_TYPE fla
 	region->released = false;
 
 	return physicalAddress + pageOffset;
-	#endif
 }
 
 static allocated_memory_region *

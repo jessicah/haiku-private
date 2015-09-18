@@ -84,6 +84,7 @@ trampoline_32:
 	popl	%eax
 	lgdtl	(%eax)
 
+
 	// Jump into the 64-bit code segment.
 	pushl	$KERNEL_CODE_SELECTOR
 	leal	(.Llmode - smp_trampoline)(%ebx), %eax

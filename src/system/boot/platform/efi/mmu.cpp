@@ -342,7 +342,7 @@ mmu_map_physical_memory(addr_t physicalAddress, size_t size, EFI_MEMORY_TYPE fla
 	if (physicalAddress + size > (512ull * 1024 * 1024 * 1024))
 		panic("Can't currently support more than 512GB of RAM!");
 
-	dprintf("mmu_map_physical_memory: AllocatePages @ %lx, %u pages\n", physicalAddress, aligned_size / B_PAGE_SIZE);
+	dprintf("mmu_map_physical_memory: AllocatePages @ %lx, %" B_PRIuSIZE " pages\n", physicalAddress, aligned_size / B_PAGE_SIZE);
 	EFI_STATUS status =
 		kBootServices->AllocatePages(AllocateAddress, EfiACPIReclaimMemory, aligned_size / B_PAGE_SIZE, &physicalAddress);
 	if (status != EFI_SUCCESS) {

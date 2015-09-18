@@ -219,11 +219,15 @@ platform_start_kernel(void)
 		panic("Unable to allocate memory map.");
 	}
 
+	dprintf("malloc'd memory map of %lu bytes\n", actual_memory_map_size);
+
 	// Read (and print) the memory map.
 	memory_map_size = actual_memory_map_size;
 	if (kBootServices->GetMemoryMap(&memory_map_size, memory_map, &map_key, &descriptor_size, &descriptor_version) != EFI_SUCCESS) {
 		panic("Unable to fetch system memory map.");
 	}
+
+	dprintf("updated memory map size to %lu bytes\n", memory_map_size);
 
 	addr_t addr = (addr_t)memory_map;
 	dprintf("System provided memory map:\n");
@@ -257,16 +261,20 @@ platform_start_kernel(void)
 			break;
 		}
 
+		dprintf("current memory map size = %lu bytes, capacity = %lu bytes\n", memory_map_size, actual_memory_map_size);
 		memory_map_size = actual_memory_map_size;
 		if (kBootServices->GetMemoryMap(&memory_map_size, memory_map, &map_key, &descriptor_size, &descriptor_version) != EFI_SUCCESS) {
 			panic("Unable to fetch system memory map.");
 		}
+		dprintf("updated memory map size to %lu bytes\n", memory_map_size);
 	}
 	// We're on our own now...
 
 	// The console was provided by boot services, disable it.
 	stdout = NULL;
 	stderr = NULL;
+
+	dprintf("framebuffer @ %p\n", (void*)gKernelArgs.frame_buffer.physical_buffer.start);
 
 	// Update EFI, generate final kernel physical memory map, etc.
 	dprintf("mmu_post_efi_setup...\n");

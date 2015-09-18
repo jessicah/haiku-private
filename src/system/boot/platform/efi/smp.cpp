@@ -31,7 +31,7 @@
 
 
 // See comments at the end of smp_boot_other_cpus()
-#define NO_SMP 1
+#define NO_SMP 0
 
 #define TRACE_SMP
 #ifdef TRACE_SMP
@@ -307,13 +307,16 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 	// allocate a stack and a code area for the smp trampoline
 	// (these have to be < 1M physical, 0xa0000-0xfffff is reserved by the BIOS,
 	// and when PXE services are used, the 0x8d000-0x9ffff is also reserved)
-#ifdef _PXE_ENV
-	uint64 trampolineCode = 0x8b000;
-	uint64 trampolineStack = 0x8c000;
-#else
-	uint64 trampolineCode = 0x9f000;
-	uint64 trampolineStack = 0x9e000;
-#endif
+
+	// Interestingly, found some of the ranges above used by ACPI and/or UEFI,
+	// e.g. in one case, we were trying to write to a location mapped as
+	// ACPI Non-Volatile Storage by UEFI!
+
+	// Perhaps we should just iterate over the provided memory map to find a
+	// suitable block of memory to use, since our trampoline code, unlike the
+	// bios_ia32 version, is actually relocatable...
+	uint64 trampolineCode = 0x9000;
+	uint64 trampolineStack = 0x8000;
 
 	// copy the trampoline code over
 	TRACE(("copying the trampoline code to %p from %p\n", (char*)trampolineCode, (const void*)&smp_trampoline));
@@ -348,6 +351,7 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 			(uint32 *)(trampolineCode + (uint64)smp_trampoline_args - (uint64)smp_trampoline);
 		dprintf("%d: trampoline args value = %x\n", i, *args_ptr);
 		*args_ptr = (uint32)(uint64)args;
+		dprintf("%d: trampoline args value now = %x\n", i, *args_ptr);
 
 		/* clear apic errors */
 		dprintf("%d: clear apic errors\n", i);
@@ -424,12 +428,14 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 		// Wait for the trampoline code to clear the final stack location.
 		// This serves as a notification for us that it has loaded the address
 		// and it is safe for us to overwrite it to trampoline the next CPU.
+		dprintf("%d: wait for trampoline code to finish...\n", i);
 		while (args->sentinel != 0) {
 			// On actual hardware, this is failing for some reason. Perhaps
 			// we need to use a better location for the trampoline code?
 			// Either way, it never succeeds, so defined NO_SMP for now.
 			spin(1000);
 		}
+		dprintf("%d: AP cpu booted!\n", i);
 	}
 
 	TRACE(("done trampolining\n"));

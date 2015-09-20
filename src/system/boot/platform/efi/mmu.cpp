@@ -51,7 +51,7 @@ mmu_generate_post_efi_page_tables(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *
 		panic("Failed to allocate PML4.");
 	gKernelArgs.arch_args.phys_pgdir = (uint32_t)(addr_t)pml4;
 	memset(pml4, 0, B_PAGE_SIZE);
-	platform_bootloader_address_to_kernel_address(pml4, &gKernelArgs.arch_args.vir_pgdir);
+	platform_convert_to_kernel_address(pml4, &gKernelArgs.arch_args.vir_pgdir);
 
 	// Store the virtual memory usage information.
 	gKernelArgs.virtual_allocated_range[0].start = KERNEL_LOAD_BASE_64_BIT;
@@ -123,7 +123,7 @@ mmu_generate_post_efi_page_tables(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *
 
 		// Get the physical address to map.
 		void *phys;
-		if (platform_kernel_address_to_bootloader_address(KERNEL_LOAD_BASE_64_BIT + (i * B_PAGE_SIZE),
+		if (platform_convert_to_loader_address(KERNEL_LOAD_BASE_64_BIT + (i * B_PAGE_SIZE),
 								  &phys) != B_OK)
 			continue;
 
@@ -379,7 +379,7 @@ get_region(void *address, size_t size)
 }
 
 extern "C" status_t
-platform_bootloader_address_to_kernel_address(void *address, uint64_t *_result)
+platform_convert_to_kernel_address(void *address, uint64_t *_result)
 {
 	uint64_t addr = (uint64_t)address;
 
@@ -401,7 +401,7 @@ platform_bootloader_address_to_kernel_address(void *address, uint64_t *_result)
 }
 
 extern "C" status_t
-platform_kernel_address_to_bootloader_address(uint64_t address, void **_result)
+platform_convert_to_loader_address(uint64_t address, void **_result)
 {
 	for (allocated_memory_region *region = allocated_memory_regions; region; region = region->next) {
 		if (region->vaddr != 0 && region->vaddr <= address && address < region->vaddr + region->size) {

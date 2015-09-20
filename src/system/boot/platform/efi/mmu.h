@@ -34,9 +34,9 @@ mmu_post_efi_setup(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *memory_map, UIN
 extern uint64_t
 mmu_generate_post_efi_page_tables(UINTN memory_map_size, EFI_MEMORY_DESCRIPTOR *memory_map, UINTN descriptor_size, UINTN descriptor_version);
 extern status_t
-platform_kernel_address_to_bootloader_address(uint64_t address, void **_result);
+platform_convert_to_loader_address(uint64_t address, void **_result);
 extern status_t
-platform_bootloader_address_to_kernel_address(void *address, uint64_t *_result);
+platform_convert_to_kernel_address(void *address, uint64_t *_result);
 
 #ifdef __cplusplus
 }

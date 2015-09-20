@@ -69,14 +69,14 @@ platform_boot_options(void)
 }
 
 extern "C" status_t
-platform_bootloader_address_to_kernel_address(void *address, uint64_t *_result);
+platform_convert_to_kernel_address(void *address, uint64_t *_result);
 
 /*! Convert a 32-bit address to a 64-bit address. */
 static inline uint64
 fix_address(uint64 address)
 {
 	uint64 result;
-	if (platform_bootloader_address_to_kernel_address((void *)address, &result) != B_OK)
+	if (platform_convert_to_kernel_address((void *)address, &result) != B_OK)
 		return address;
 	else
 		return result;

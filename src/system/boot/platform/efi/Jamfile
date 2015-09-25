@@ -11,6 +11,7 @@ UsePrivateHeaders [ FDirName kernel boot platform efi arch $(TARGET_ARCH) ] ;
 	defines = [ FDefines $(defines) ] ;
 	SubDirCcFlags $(defines) ;
 	SubDirC++Flags $(defines) -fno-rtti ;
+	ObjectC++Flags smp.cpp : -std=c++11 ;
 }
 
 local efi_glue_src =

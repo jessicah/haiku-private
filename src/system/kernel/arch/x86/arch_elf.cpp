@@ -112,7 +112,11 @@ arch_elf_relocate_rel(struct elf_image_info *image,
 			case R_386_RELATIVE:
 			case R_386_GOTOFF:
 			case R_386_GOTPC:
+#ifndef B_HAIKU_64_BIT
 				A = *(addr_t *)(image->text_region.delta + rel[i].r_offset);
+#else
+				A = *(addr_t *)(uint64)(image->text_region.delta + rel[i].r_offset);
+#endif
 				TRACE(("A %p\n", (void *)A));
 				break;
 		}
@@ -150,8 +154,11 @@ arch_elf_relocate_rel(struct elf_image_info *image,
 					ELF32_R_TYPE(rel[i].r_info));
 				return B_BAD_DATA;
 		}
-
+#ifndef B_HAIKU_64_BIT
 		resolveAddress = (addr_t *)(image->text_region.delta + rel[i].r_offset);
+#else
+		resolveAddress = (addr_t *)(uint64)(image->text_region.delta + rel[i].r_offset);
+#endif
 #ifndef _BOOT_MODE
 		if (!is_in_image(image, (addr_t)resolveAddress)) {
 			dprintf("arch_elf_relocate_rel: invalid offset %#lx\n",

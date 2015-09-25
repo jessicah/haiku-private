@@ -1,5 +1,6 @@
 SubDir HAIKU_TOP src system boot platform efi ;
 
+SubDirHdrs $(HAIKU_TOP) src add-ons kernel partitioning_systems gpt ;
 UsePrivateHeaders [ FDirName kernel boot ] ;
 UsePrivateHeaders [ FDirName kernel boot platform efi ] ;
 UsePrivateHeaders [ FDirName kernel boot platform efi protocol ] ;

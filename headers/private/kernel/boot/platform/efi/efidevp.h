@@ -255,6 +255,14 @@ typedef struct _UART_DEVICE_PATH {
         UINT8                           StopBits;
 } UART_DEVICE_PATH;
 
+#define MSG_SATA_DP						0x12
+typedef struct _SATA_DEVICE_PATH {
+		EFI_DEVICE_PATH					Header;
+		UINT16							HBAPortNumber;
+		UINT16							PortMultiplierPortNumber;
+		UINT16							LogicalUnitNumber;
+} SATA_DEVICE_PATH;
+
 #define MSG_VENDOR_DP                   0x0A
 /* Use VENDOR_DEVICE_PATH struct */
 

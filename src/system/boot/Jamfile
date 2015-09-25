@@ -46,6 +46,7 @@ BootMergeObject boot_libroot.o :
 	strchr.c
 	strrchr.c
 	strtol.c
+	strtoul.c
 	$(extraSources)
 ;
 

@@ -88,14 +88,16 @@ apic_write(uint32 offset, uint32 data)
 static uint32
 apic_read_phys(uint32 offset)
 {
-	return *(volatile uint32 *)((addr_t)(void *)gKernelArgs.arch_args.apic_phys + offset);
+	addr_t apicAddress = (addr_t)gKernelArgs.arch_args.apic_phys + offset;
+	return *(volatile uint32 *)((addr_t)(void *)apicAddress);
 }
 
 
 static void
 apic_write_phys(uint32 offset, uint32 data)
 {
-	*(volatile uint32 *)((addr_t)(void *)gKernelArgs.arch_args.apic_phys + offset) = data;
+	addr_t apicAddress = (addr_t)gKernelArgs.arch_args.apic_phys + offset;
+	*(volatile uint32 *)((addr_t)(void *)apicAddress) = data;
 }
 
 
@@ -264,9 +266,9 @@ smp_init_other_cpus(void)
 
 	TRACE(("smp: found %" B_PRId32 " cpu%s\n", gKernelArgs.num_cpus,
 		gKernelArgs.num_cpus != 1 ? "s" : ""));
-	TRACE(("smp: apic_phys = %p\n", (void *)gKernelArgs.arch_args.apic_phys));
+	TRACE(("smp: apic_phys = %p\n", (void *)(addr_t)gKernelArgs.arch_args.apic_phys));
 	TRACE(("smp: ioapic_phys = %p\n",
-		(void *)gKernelArgs.arch_args.ioapic_phys));
+		(void *)(addr_t)gKernelArgs.arch_args.ioapic_phys));
 
 	// map in the apic
 	gKernelArgs.arch_args.apic = (void *)mmu_map_physical_memory(
@@ -357,7 +359,7 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 		dprintf("%d: clear apic errors\n", i);
 		if (gKernelArgs.arch_args.cpu_apic_version[i] & 0xf0) {
 			dprintf("write to apic\n");
-			dprintf("apic at %p (%p)\n", (void*)gKernelArgs.arch_args.apic, (void*)gKernelArgs.arch_args.apic_phys);
+			dprintf("apic at %p (%p)\n", (void*)gKernelArgs.arch_args.apic, (void*)(addr_t)gKernelArgs.arch_args.apic_phys);
 			apic_write_phys(APIC_ERROR_STATUS, 0);
 			dprintf("read from apic\n");
 			apic_read_phys(APIC_ERROR_STATUS);

@@ -30,9 +30,9 @@ typedef struct {
 	uint64	page_hole;
 	// smp stuff
 	uint32	apic_time_cv_factor; // apic ticks per second
-	phys_addr_t	apic_phys;
+	uint32	apic_phys;
 	FixedWidthPointer<void> apic;
-	phys_addr_t	ioapic_phys;
+	uint32	ioapic_phys;
 	uint32	cpu_apic_id[SMP_MAX_CPUS];
 	uint32	cpu_apic_version[SMP_MAX_CPUS];
 	// hpet stuff

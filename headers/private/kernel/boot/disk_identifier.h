@@ -63,6 +63,8 @@ typedef struct disk_identifier {
 		} _PACKED fibre;
 		struct {
 			off_t		size;
+			uint8		uuid[16];
+			bool		use_uuid;
 			struct {
 				off_t	offset;
 				uint32	sum;

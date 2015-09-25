@@ -33,12 +33,14 @@
 #include "vfs_net_boot.h"
 
 
-#define TRACE_VFS
+//#define TRACE_VFS
 #ifdef TRACE_VFS
 #	define TRACE(x) dprintf x
 #else
 #	define TRACE(x) ;
 #endif
+
+#define UUID_LEN	16
 
 
 typedef Stack<KPartition *> PartitionStack;
@@ -116,7 +118,7 @@ compare_cd_boot(const void* _a, const void* _b)
 	return compare_image_boot(_a, _b);
 }
 
-#if false
+
 /*!	Computes a check sum for the specified block.
 	The check sum is the sum of all data in that block interpreted as an
 	array of uint32 values.
@@ -144,7 +146,7 @@ compute_check_sum(KDiskDevice* device, off_t offset)
 
 	return sum;
 }
-#endif
+
 
 // #pragma mark - BootMethod
 
@@ -188,7 +190,6 @@ public:
 bool
 DiskBootMethod::IsBootDevice(KDiskDevice* device, bool strict)
 {
-#if false
 	disk_identifier* disk;
 	int32 diskIdentifierSize;
 	if (fBootVolume.FindData(BOOT_VOLUME_DISK_IDENTIFIER, B_RAW_TYPE,
@@ -219,6 +220,11 @@ DiskBootMethod::IsBootDevice(KDiskDevice* device, bool strict)
 
 	switch (disk->device_type) {
 		case UNKNOWN_DEVICE:
+			if (strict && disk->device.unknown.use_uuid) {
+				TRACE(("IsBootDevice: matching via uuid only\n"));
+				return memcmp(disk->device.unknown.uuid, device->PartitionData()->cookie, UUID_LEN) == 0;
+			}
+
 			// test if the size of the device matches
 			// (the BIOS might have given us the wrong value here, though)
 			if (strict && device->Size() != disk->device.unknown.size)
@@ -230,7 +236,7 @@ DiskBootMethod::IsBootDevice(KDiskDevice* device, bool strict)
 				break;
 
 			// check if the check sums match, too
-			for (int32 i = 0; i < 2; i++) {
+			for (int32 i = 0; i < NUM_DISK_CHECK_SUMS; i++) {
 				if (disk->device.unknown.check_sums[i].offset == -1)
 					continue;
 
@@ -251,7 +257,7 @@ DiskBootMethod::IsBootDevice(KDiskDevice* device, bool strict)
 			// TODO: implement me!
 			break;
 	}
-#endif
+
 	return true;
 }
 
@@ -262,9 +268,7 @@ DiskBootMethod::IsBootPartition(KPartition* partition, bool& foundForSure)
 	off_t bootPartitionOffset = fBootVolume.GetInt64(
 		BOOT_VOLUME_PARTITION_OFFSET, 0);
 
-	TRACE(("testing for boot partition\n"));
-
-	if (!fBootVolume.GetBool(BOOT_VOLUME_BOOTED_FROM_IMAGE, false) && false) {
+	if (!fBootVolume.GetBool(BOOT_VOLUME_BOOTED_FROM_IMAGE, false)) {
 		// the simple case: we can just boot from the selected boot
 		// device
 		if (partition->Offset() == bootPartitionOffset) {
@@ -308,7 +312,6 @@ DiskBootMethod::IsBootPartition(KPartition* partition, bool& foundForSure)
 		}
 	}
 
-	TRACE(("not a boot partition\n"));
 	return false;
 }
 
@@ -369,7 +372,7 @@ get_boot_partitions(KMessage& bootVolume, PartitionStack& partitions)
 		return status;
 	}
 
-	if (0 /* dump devices and partitions */) {
+	if (1 /* dump devices and partitions */) {
 		KDiskDevice *device;
 		int32 cookie = 0;
 		while ((device = manager->NextDevice(&cookie)) != NULL) {
@@ -405,16 +408,11 @@ get_boot_partitions(KMessage& bootVolume, PartitionStack& partitions)
 	bool strict = true;
 
 	while (true) {
-		TRACE(("visiting devices...\n"));
 		KDiskDevice *device;
 		int32 cookie = 0;
 		while ((device = manager->NextDevice(&cookie)) != NULL) {
-			if (!bootMethod->IsBootDevice(device, strict)) {
-				TRACE(("not a boot device...\n"));
+			if (!bootMethod->IsBootDevice(device, strict))
 				continue;
-			} else {
-				TRACE(("might have one...\n"));
-			}
 
 			if (device->VisitEachDescendant(&visitor) != NULL)
 				break;
@@ -563,8 +561,6 @@ vfs_mount_boot_file_system(kernel_args* args)
 			dprintf("Failed to mount home packagefs: %s\n",
 				strerror(packageMount));
 		}
-	} else {
-		dprintf("We're apparently not booting from a packaged system\n");
 	}
 
 	// Now that packagefs is mounted, the boot volume is really ready.
@@ -577,9 +573,6 @@ vfs_mount_boot_file_system(kernel_args* args)
 	int32 bootMethodType = bootVolume.GetInt32(BOOT_METHOD, BOOT_METHOD_DEFAULT);
 	bool bootingFromBootLoaderVolume = bootMethodType == BOOT_METHOD_HARD_DISK
 		|| bootMethodType == BOOT_METHOD_CD;
-	dprintf("module_init_post_boot_device: %s\n",
-		bootingFromBootLoaderVolume ? "booting from boot loader volume"
-			: "not using boot loader volume");
 	module_init_post_boot_device(bootingFromBootLoaderVolume);
 
 	file_cache_init_post_boot_device();

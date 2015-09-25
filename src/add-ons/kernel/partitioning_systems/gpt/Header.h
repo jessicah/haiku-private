@@ -30,6 +30,8 @@ public:
 									{ return fHeader.FirstUsableBlock(); }
 			uint64				LastUsableBlock() const
 									{ return fHeader.LastUsableBlock(); }
+			const guid_t&		UUID() const
+									{ return fHeader.disk_guid; }
 
 			uint32				EntryCount() const
 									{ return fHeader.EntryCount(); }

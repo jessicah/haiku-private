@@ -20,6 +20,12 @@ local platform_src =
 	relocation_func.cpp
 	start.cpp
 	console.cpp
+	video.cpp
+	debug.cpp
+	mmu.cpp
+	heap.cpp
+	menu.cpp
+	devices.cpp
 	;
 
 Includes [ FGristFiles $(efi_glue_src) $(platform_src) ]

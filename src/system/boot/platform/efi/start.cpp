@@ -11,7 +11,9 @@
 
 #include "console.h"
 
-#include <stdio.h>
+#include <boot/platform.h>
+#include <boot/stage2.h>
+#include <boot/stdio.h>
 
 
 extern void (*__ctor_list)(void);
@@ -33,6 +35,27 @@ call_ctors(void)
 }
 
 
+extern "C" uint32
+platform_boot_options()
+{
+	return 0;
+}
+
+
+extern "C" void
+platform_start_kernel(void)
+{
+	return;
+}
+
+
+extern "C" void
+platform_exit(void)
+{
+	return;
+}
+
+
 /**
  * efi_main - The entry point for the EFI application
  * @image: firmware-allocated handle that identifies the image
@@ -41,16 +64,19 @@ call_ctors(void)
 extern "C" EFI_STATUS
 efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 {
+	stage2_args args;
+
 	kSystemTable = systemTable;
 	kBootServices = systemTable->BootServices;
 	kRuntimeServices = systemTable->RuntimeServices;
+
+	memset(&args, 0, sizeof(stage2_args));
 
 	call_ctors();
 
 	console_init();
 
-	printf("Hello from EFI Loader for Haiku!\nPress any key to continue...\n");
-	console_wait_for_key();
+	main(&args);
 
 	return EFI_SUCCESS;
 }

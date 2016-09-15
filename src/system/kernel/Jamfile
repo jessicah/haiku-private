@@ -35,6 +35,7 @@ KernelMergeObject kernel_core.o :
 	heap.cpp
 	image.cpp
 	int.cpp
+	kernel_arg_sizes.cpp
 	kernel_daemon.cpp
 	linkhack.c
 	listeners.cpp
@@ -74,6 +75,10 @@ KernelMergeObject kernel_core.o :
 
 	: $(TARGET_KERNEL_PIC_CCFLAGS)
 ;
+
+# Generate the kernel arg sizes for all versions
+local kernelArgSizesSource = [ FGristFiles kernel_arg_sizes.cpp ] ;
+KernelArgSizes $(kernelArgSizesSource) ;
 
 # Generate the header defining macros for C++ structure sizes.
 local kernelC++StructSizesHeader = [ FGristFiles kernel_c++_struct_sizes.h ] ;

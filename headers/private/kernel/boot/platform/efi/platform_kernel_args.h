@@ -10,6 +10,10 @@
 #	error This file is included from <boot/kernel_args.h> only
 #endif
 
+#if CURRENT_KERNEL_ARGS_VERSION < 2
+#error "require kernel args version > 2"
+#endif
+
 // currently the EFI loader pretends to be the bios_ia32 platform.
 // not quite right, as the kernel needs to be aware of efi runtime services
 
@@ -41,8 +45,6 @@ typedef struct {
 	// seems to be ignored entirely?
 
 	apm_info	apm;
-
-	FixedWidthPointer<void> acpi_root;
 } _PACKED platform_kernel_args;
 
 

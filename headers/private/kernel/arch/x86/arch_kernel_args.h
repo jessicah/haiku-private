@@ -38,6 +38,10 @@ typedef struct {
 	// hpet stuff
 	uint32	hpet_phys;
 	FixedWidthPointer<void> hpet;
+	// acpi
+#if CURRENT_KERNEL_ARGS_VERSION >= 2
+	FixedWidthPointer<void> acpi_root;
+#endif
 } _PACKED arch_kernel_args;
 
 #endif	/* KERNEL_ARCH_x86_KERNEL_ARGS_H */

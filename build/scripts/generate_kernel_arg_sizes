@@ -1,0 +1,61 @@
+#!/bin/sh
+
+# The first argument is the shell script that initializes the variables:
+# sourceFile
+# tmpDir
+# hostCC
+# defines
+# includePaths
+
+if [ $# -gt 0 ]; then
+	. $1
+	shift
+fi
+
+tempFile=$tmpDir/"$sourceFile".bin
+generatorFile=$tmpDir/"$sourceFile".gen.cpp
+outFile=$tmpDir/"$sourceFile".out
+counter=1
+continue=1
+
+echo $tempFile
+echo $generatorFile
+echo $outFile
+echo $sourceFile
+echo $tmpDir
+echo $hostCC
+echo $defines
+echo $includePaths
+
+cat <<EOF >$generatorFile
+#include <kernel_args.h>
+#include <stdio.h>
+int main() {
+#if CURRENT_KERNEL_ARGS_VERSION > MAX_KERNEL_ARGS_VERSION
+	return 1;
+#else
+	printf("\t%lu,\n", sizeof(kernel_args));
+	return 0;
+#endif
+}
+EOF
+
+cat $generatorFile
+
+echo '#include <stdlib.h>' >$outFile
+echo 'size_t kernel_arg_sizes[] = {' >>$outFile
+while [ $continue -eq 1 ]; do
+	echo "compiling for version $counter..."
+	$hostCC -o $tempFile $generatorFile -DCURRENT_KERNEL_ARGS_VERSION=$counter
+	if [ $? -eq 0 ]; then
+		echo "generating size for version $counter..."
+		$tempFile >>$outFile
+		counter=$((counter + 1))
+	else
+		echo "failed to compile generator file at version $counter"
+		continue=0
+	fi
+done
+echo '};' >>$outFile
+rm -f $tempFile $generatorFile
+mv $outFile $sourceFile

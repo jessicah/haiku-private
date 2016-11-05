@@ -35,7 +35,6 @@ KernelMergeObject kernel_core.o :
 	heap.cpp
 	image.cpp
 	int.cpp
-	kernel_arg_sizes.cpp
 	kernel_daemon.cpp
 	linkhack.c
 	listeners.cpp
@@ -75,10 +74,6 @@ KernelMergeObject kernel_core.o :
 
 	: $(TARGET_KERNEL_PIC_CCFLAGS)
 ;
-
-# Generate the kernel arg sizes for all versions
-local kernelArgSizesSource = [ FGristFiles kernel_arg_sizes.cpp ] ;
-KernelArgSizes $(kernelArgSizesSource) ;
 
 # Generate the header defining macros for C++ structure sizes.
 local kernelC++StructSizesHeader = [ FGristFiles kernel_c++_struct_sizes.h ] ;
@@ -201,6 +196,24 @@ if $(TARGET_PLATFORM) = haiku {
 		: kernel_$(TARGET_ARCH) ;
 }
 
+# set the ABI version to match CURRENT_KERNEL_ARGS_VERSION in kernel_args.h,
+# which will allow the bootloader to identify a kernel supporting the newer
+# kernel_args struct, which is binary incompatible with kernels without an
+# explicitly configured ABI version
+
+rule KernelABIVersion
+{
+	local setABIVersion = <build>set_kernel_abi_version ;
+	Depends $(1) : $(setABIVersion) ;
+	KernelABIVersion1 $(1) : $(setABIVersion) ;
+}
+
+actions KernelABIVersion1
+{
+	$(2) $(1)
+}
+
+KernelABIVersion kernel_$(TARGET_ARCH) ;
 
 SubInclude HAIKU_TOP src system kernel arch ;
 SubInclude HAIKU_TOP src system kernel cache ;

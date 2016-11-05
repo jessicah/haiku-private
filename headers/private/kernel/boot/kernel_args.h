@@ -9,6 +9,9 @@
 #define KERNEL_BOOT_KERNEL_ARGS_H
 
 
+#define CURRENT_KERNEL_ARGS_VERSION	2
+#ifndef _JUST_VERSION
+
 #include <SupportDefs.h>
 
 #include <boot/elf.h>
@@ -21,10 +24,6 @@
 #include <util/FixedWidthPointer.h>
 
 
-#ifndef CURRENT_KERNEL_ARGS_VERSION
-#define CURRENT_KERNEL_ARGS_VERSION	2
-#endif
-#define MAX_KERNEL_ARGS_VERSION 2
 #define MAX_KERNEL_ARGS_RANGE		20
 
 // names of common boot_volume fields
@@ -36,8 +35,6 @@
 #define BOOT_VOLUME_PARTITION_OFFSET	"partition offset"
 #define BOOT_VOLUME_DISK_IDENTIFIER		"disk identifier"
 
-// needed for versioning the kernel_args
-extern size_t kernel_arg_sizes[MAX_KERNEL_ARGS_VERSION];
 
 // boot methods
 enum {
@@ -112,5 +109,7 @@ typedef struct kernel_args {
 	FixedWidthPointer<uint8> boot_splash;
 
 } _PACKED kernel_args;
+
+#endif // _JUST_VERSION
 
 #endif	/* KERNEL_BOOT_KERNEL_ARGS_H */

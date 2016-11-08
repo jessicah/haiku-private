@@ -27,6 +27,20 @@ typedef struct {
 
 	// Flattened Device Tree blob
 	void	*fdt;
+
+	uint64 _reserved[8];
 } platform_kernel_args;
+
+typedef struct {
+	void	*openfirmware_entry;
+	char	rtc_path[128];
+
+	// XXX: HACK: must match the U-Boot platform args
+	// FIXME: use a union instead?
+
+	// Flattened Device Tree blob
+	void	*fdt;
+} platform_kernel_args_legacy;
+
 
 #endif	/* KERNEL_BOOT_PLATFORM_OPENFIRMWARE_KERNEL_ARGS_H */

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -12,8 +12,16 @@
 // kernel args
 typedef struct {
 	// architecture specific
-	vcpu_struct *vcpu; 
+	vcpu_struct *vcpu;
+
+	uint64 _reserved;
 } arch_kernel_args;
+
+typedef struct {
+	// architecture specific
+	vcpu_struct *vcpu;
+} arch_kernel_args_legacy;
+
 
 #endif
 

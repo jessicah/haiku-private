@@ -12,8 +12,9 @@
 #include <algorithm>
 
 #include <kernel.h>
-#include <boot/stage2.h>
+#include <boot/kernel_args.h>
 #include <boot/platform.h>
+#include <boot/stage2.h>
 
 
 static const size_t kChunkSize = 16 * B_PAGE_SIZE;
@@ -441,3 +442,45 @@ kernel_args_free(void* block)
 	sLast = NULL;
 }
 
+/*! This converts the kernel_args struct to the legacy format required
+	for older kernels.
+*/
+bool
+convert_kernel_args_to_legacy(struct kernel_args *args,
+        struct kernel_args_legacy *legacy)
+{
+        if (args == NULL || legacy == NULL)
+                return false;
+
+        legacy->kernel_args_size = sizeof(struct kernel_args_legacy);
+        legacy->version = LEGACY_KERNEL_ARGS_VERSION;
+
+        unsigned char *legacy_start = (unsigned char*)legacy;
+        unsigned char *args_start = (unsigned char*)args;
+
+        size_t legacy_begin = offsetof(struct kernel_args_legacy, kernel_image);
+        size_t legacy_end = offsetof(struct kernel_args_legacy, debug_output);
+        size_t args_begin = offsetof(struct kernel_args, kernel_image);
+        size_t args_end = offsetof(struct kernel_args, boot_splash);
+        if (legacy_end - legacy_begin != args_end - args_begin)
+                return false;
+        memcpy(legacy_start + legacy_begin, args_start + args_begin, legacy_end - legacy_begin);
+
+        legacy->boot_splash = args->boot_splash;
+
+        legacy_begin = offsetof(struct kernel_args_legacy, debug_output);
+        legacy_end = offsetof(struct kernel_args_legacy, platform_args);
+        args_begin = offsetof(struct kernel_args, debug_output);
+        args_end = offsetof(struct kernel_args, _reserved);
+        if (legacy_end - legacy_begin != args_end - args_begin)
+                return false;
+        memcpy(legacy_start + legacy_begin, args_start + args_begin, legacy_end - legacy_begin);
+
+        if (!convert_platform_args_to_legacy(&args->platform_args,
+                        &legacy->platform_args))
+                return false;
+        if (!convert_arch_args_to_legacy(&args->arch_args, &legacy->arch_args))
+                return false;
+
+        return true;
+}

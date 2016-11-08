@@ -19,13 +19,29 @@ typedef struct {
 	int			fpu_type;
 	int			mmu_type;
 	int			platform;
-	int			machine; 
+	int			machine;
 
 	// architecture specific
 	uint64		cpu_frequency;
 	uint64		bus_frequency;
 	uint64		time_base_frequency;
+
+	uint64 _reserved[8];
 } arch_kernel_args;
+
+typedef struct {
+	int			cpu_type;
+	int			fpu_type;
+	int			mmu_type;
+	int			platform;
+	int			machine;
+
+	// architecture specific
+	uint64		cpu_frequency;
+	uint64		bus_frequency;
+	uint64		time_base_frequency;
+} arch_kernel_args_legacy;
+
 
 #endif /* _KERNEL_ARCH_MIPSEL_KERNEL_ARGS_H */
 

@@ -32,6 +32,29 @@ typedef struct {
 
 	// platform type we booted from
 	int			platform;
+
+	uint64 _reserved[8];
 } arch_kernel_args;
+
+typedef struct {
+	// architecture specific
+	uint64		cpu_frequency;
+	uint64		bus_frequency;
+	uint64		time_base_frequency;
+
+	addr_range	page_table;		// virtual address and size of the page table
+	addr_range	exception_handlers;
+	addr_range	framebuffer;		// maps where the framebuffer is located, in physical memory
+	int 		screen_x, screen_y, screen_depth;
+
+	// The virtual ranges we want to keep in the kernel. E.g. those belonging
+	// to the Open Firmware.
+	uint32		num_virtual_ranges_to_keep;
+	addr_range	virtual_ranges_to_keep[MAX_VIRTUAL_RANGES_TO_KEEP];
+
+	// platform type we booted from
+	int			platform;
+} arch_kernel_args_legacy;
+
 
 #endif	/* KERNEL_ARCH_PPC_KERNEL_ARGS_H */

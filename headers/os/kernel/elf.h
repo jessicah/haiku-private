@@ -78,14 +78,17 @@ typedef struct {
 #define ELF_MAGIC	"\x7f""ELF"
 
 /* e_ident[] indices */
-#define EI_MAG0		0
-#define EI_MAG1		1
-#define EI_MAG2		2
-#define EI_MAG3		3
-#define EI_CLASS	4
-#define EI_DATA		5
-#define EI_VERSION	6
-#define EI_PAD		7
+#define EI_MAG0			0
+#define EI_MAG1			1
+#define EI_MAG2			2
+#define EI_MAG3			3
+#define EI_CLASS		4
+#define EI_DATA			5
+#define EI_VERSION		6
+#define EI_PAD			7
+#define EI_ABIVERSION	8
+	/* Only used by the bootloader to determine what version of the
+	   kernel_args struct the kernel uses */
 
 /* e_type (Object file type) */
 #define ET_NONE			0 /* No file type */

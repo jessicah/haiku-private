@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -26,8 +26,8 @@ typedef struct {
 	unsigned int cons_line;
 	char *str;
 	addr_range bootdir_addr;
-	addr_range kernel_seg0_addr;	
-	addr_range kernel_seg1_addr;	
+	addr_range kernel_seg0_addr;
+	addr_range kernel_seg1_addr;
 	unsigned int num_phys_mem_ranges;
 	addr_range phys_mem_range[MAX_PHYS_MEM_ADDR_RANGE];
 	unsigned int num_phys_alloc_ranges;
@@ -37,7 +37,26 @@ typedef struct {
 	unsigned int num_cpus;
 	addr_range cpu_kstack[SMP_MAX_CPUS];
 	// architecture specific
+
+	uint64 _reserved[8];
 } kernel_args;
+
+typedef struct {
+	unsigned int cons_line;
+	char *str;
+	addr_range bootdir_addr;
+	addr_range kernel_seg0_addr;
+	addr_range kernel_seg1_addr;
+	unsigned int num_phys_mem_ranges;
+	addr_range phys_mem_range[MAX_PHYS_MEM_ADDR_RANGE];
+	unsigned int num_phys_alloc_ranges;
+	addr_range phys_alloc_range[MAX_PHYS_ALLOC_ADDR_RANGE];
+	unsigned int num_virt_alloc_ranges;
+	addr_range virt_alloc_range[MAX_VIRT_ALLOC_ADDR_RANGE];
+	unsigned int num_cpus;
+	addr_range cpu_kstack[SMP_MAX_CPUS];
+	// architecture specific
+} kernel_args_legacy;
 
 #endif
 

@@ -11,16 +11,33 @@
 
 // kernel args
 typedef struct {
-	int		cpu_type; 
-	int		fpu_type; 
-	int		mmu_type; 
-	int		platform; 
+	int		cpu_type;
+	int		fpu_type;
+	int		mmu_type;
+	int		platform;
 	int		machine;  // platform specific machine type
 
 	// architecture specific
         uint32  	phys_pgdir;
         uint32  	vir_pgdir;
 	uint32		next_pagetable;
+
+	uint64 _reserved[8];
 } arch_kernel_args;
+
+// kernel args
+typedef struct {
+	int		cpu_type;
+	int		fpu_type;
+	int		mmu_type;
+	int		platform;
+	int		machine;  // platform specific machine type
+
+	// architecture specific
+        uint32  	phys_pgdir;
+        uint32  	vir_pgdir;
+	uint32		next_pagetable;
+} arch_kernel_args_legacy;
+
 
 #endif	/* KERNEL_ARCH_ARM_KERNEL_ARGS_H */

@@ -18,7 +18,7 @@
 
 
 typedef struct {
-	char dummy;
-} platform_kernel_args;
+	uint64 _reserved[8];
+} platform_kernel_args, platform_kernel_args_legacy;
 
 #endif	/* KERNEL_BOOT_PLATFORM_PI_KERNEL_ARGS_H */

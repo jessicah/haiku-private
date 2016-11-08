@@ -20,6 +20,8 @@
 typedef struct {
 	uint64	cfe_entry;	// pointer but always 64bit
 	//XXX:char	rtc_path[128];
-} platform_kernel_args;
+
+	uint64 _reserved[8];
+} platform_kernel_args, platform_kernel_args_legacy;
 
 #endif	/* KERNEL_BOOT_PLATFORM_CFE_KERNEL_ARGS_H */

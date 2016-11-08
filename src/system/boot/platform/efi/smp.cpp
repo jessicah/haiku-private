@@ -283,9 +283,10 @@ smp_init_other_cpus(void)
 
 
 void
-smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
+smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernelEntry,
+	struct kernel_args const &kernelArgs)
 {
-	if (gKernelArgs.num_cpus < 2)
+	if (kernelArgs.num_cpus < 2)
 		return;
 
 	TRACE(("trampolining other cpus\n"));
@@ -302,8 +303,8 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 		(uint64)&smp_trampoline_end - (uint64)&smp_trampoline);
 
 	// boot the cpus
-	TRACE(("we have %d CPUs to boot...\n", gKernelArgs.num_cpus - 1));
-	for (uint32 i = 1; i < gKernelArgs.num_cpus; i++) {
+	TRACE(("we have %d CPUs to boot...\n", kernelArgs.num_cpus - 1));
+	for (uint32 i = 1; i < kernelArgs.num_cpus; i++) {
 		TRACE(("trampolining CPU %d\n", i));
 		uint32 config;
 		uint64 numStartups;
@@ -321,10 +322,11 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 		#undef COPY_ARRAY
 		args->pml4 = pml4;
 		args->gdt64 = gdtr64;
-		args->kernel_entry = kernel_entry;
+		args->kernel_entry = kernelEntry;
 		args->kernel_args = (uint64)&gKernelArgs;
 		args->current_cpu = i;
-		args->stack_top = gKernelArgs.cpu_kstack[i].start + gKernelArgs.cpu_kstack[i].size;
+		args->stack_top = kernelArgs.cpu_kstack[i].start
+			+ kernelArgs.cpu_kstack[i].size;
 		args->sentinel = 1;
 
 		// put the args in the right place
@@ -333,14 +335,14 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 		*args_ptr = (uint32)(uint64)args;
 
 		/* clear apic errors */
-		if (gKernelArgs.arch_args.cpu_apic_version[i] & 0xf0) {
+		if (kernelArgs.arch_args.cpu_apic_version[i] & 0xf0) {
 			apic_write(APIC_ERROR_STATUS, 0);
 			apic_read(APIC_ERROR_STATUS);
 		}
 
 		/* send (aka assert) INIT IPI */
 		config = (apic_read(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
-			| (gKernelArgs.arch_args.cpu_apic_id[i] << 24);
+			| (kernelArgs.arch_args.cpu_apic_id[i] << 24);
 		apic_write(APIC_INTR_COMMAND_2, config); /* set target pe */
 		config = (apic_read(APIC_INTR_COMMAND_1) & 0xfff00000)
 			| APIC_TRIGGER_MODE_LEVEL | APIC_INTR_COMMAND_1_ASSERT
@@ -353,7 +355,7 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 
 		/* deassert INIT */
 		config = (apic_read(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
-			| (gKernelArgs.arch_args.cpu_apic_id[i] << 24);
+			| (kernelArgs.arch_args.cpu_apic_id[i] << 24);
 		apic_write(APIC_INTR_COMMAND_2, config);
 		config = (apic_read(APIC_INTR_COMMAND_1) & 0xfff00000)
 			| APIC_TRIGGER_MODE_LEVEL | APIC_DELIVERY_MODE_INIT;
@@ -366,7 +368,7 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 		/* wait 10ms */
 		spin(10000);
 		/* is this a local apic or an 82489dx ? */
-		numStartups = (gKernelArgs.arch_args.cpu_apic_version[i] & 0xf0)
+		numStartups = (kernelArgs.arch_args.cpu_apic_version[i] & 0xf0)
 			? 2 : 0;
 		for (j = 0; j < numStartups; j++) {
 			/* it's a local apic, so send STARTUP IPIs */
@@ -374,7 +376,7 @@ smp_boot_other_cpus(uint32 pml4, uint32 gdtr64, uint64 kernel_entry)
 
 			/* set target pe */
 			config = (apic_read(APIC_INTR_COMMAND_2) & APIC_INTR_COMMAND_2_MASK)
-				| (gKernelArgs.arch_args.cpu_apic_id[i] << 24);
+				| (kernelArgs.arch_args.cpu_apic_id[i] << 24);
 			apic_write(APIC_INTR_COMMAND_2, config);
 
 			/* send the IPI */

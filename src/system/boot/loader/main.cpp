@@ -63,7 +63,7 @@ main(stage2_args *args)
 	BootVolume bootVolume;
 	PathBlacklist pathBlacklist;
 
-	if (get_boot_file_system(args, bootVolume) != B_OK
+	if (get_boot_file_system(args, bootVolume) == B_OK
 		|| (platform_boot_options() & BOOT_OPTION_MENU) != 0) {
 		if (!bootVolume.IsValid())
 			puts("\tno boot path found, scan for all partitions...\n");

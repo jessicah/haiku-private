@@ -176,6 +176,11 @@ platform_start_kernel(void)
 	preloaded_elf64_image *image = static_cast<preloaded_elf64_image *>(
 		gKernelArgs.kernel_image.Pointer());
 
+	if (image->elf_header.e_ident[EI_ABIVERSION] != CURRENT_KERNEL_ARGS_VERSION)
+		puts("Loading earlier kernel...\n");
+	else
+		puts("Loading current kernel...\n");
+
 	long_gdt_init();
 	convert_kernel_args();
 
@@ -231,6 +236,21 @@ platform_start_kernel(void)
 	uint64_t final_pml4 = mmu_generate_post_efi_page_tables(memory_map_size, memory_map, descriptor_size, descriptor_version);
 	dprintf("Final PML4 at %#lx\n", final_pml4);
 
+	struct kernel_args kernelArgs;
+	memcpy(&kernelArgs, &gKernelArgs, sizeof(struct kernel_args));
+
+	// If we're booting an older kernel, use the legacy format
+	struct kernel_args_legacy legacy;
+	if (image->elf_header.e_ident[EI_ABIVERSION] != CURRENT_KERNEL_ARGS_VERSION) {
+		if (!convert_kernel_args_to_legacy(&gKernelArgs, &legacy))
+			panic("Unable to convert to legacy format");
+	}
+
+	printf("size of kernel_args: %u (%u)\n", kernelArgs.kernel_args_size, sizeof(struct kernel_args));
+	printf("size of legacy_kernel_args: %u (%u)\n", legacy.kernel_args_size, sizeof(struct kernel_args_legacy));
+	printf("version of kernel_args: %u\n", kernelArgs.version);
+	printf("version of legacy_kernel_args: %u\n", legacy.version);
+
 	// Attempt to fetch the memory map and exit boot services.
 	// This needs to be done in a loop, as ExitBootServices can change the
 	// memory map.
@@ -260,12 +280,16 @@ platform_start_kernel(void)
 	// Update EFI, generate final kernel physical memory map, etc.
 	mmu_post_efi_setup(memory_map_size, memory_map, descriptor_size, descriptor_version);
 
-	smp_boot_other_cpus(final_pml4, (uint32_t)(uint64_t)&gLongGDTR, gLongKernelEntry);
+		// overwrite gKernelArgs
+		memcpy(&gKernelArgs, &legacy, sizeof(struct kernel_args_legacy));
+
+	smp_boot_other_cpus(final_pml4, (uint32_t)(uint64_t)&gLongGDTR, gLongKernelEntry, kernelArgs);
+
+	uint64 stackStart = kernelArgs.cpu_kstack[0].start;
+	uint64 stackSize = kernelArgs.cpu_kstack[0].size;
 
 	// Enter the kernel!
-	efi_enter_kernel(final_pml4,
-			 gLongKernelEntry,
-			 gKernelArgs.cpu_kstack[0].start + gKernelArgs.cpu_kstack[0].size);
+	efi_enter_kernel(final_pml4, gLongKernelEntry, stackStart + stackSize);
 
 	panic("Shouldn't get here");
 }
@@ -302,6 +326,7 @@ efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *systemTable)
 	console_init();
 
 	sBootOptions = console_check_boot_keys();
+	sBootOptions |= BOOT_OPTION_MENU;
 
 	// disable apm in case we ever load a 32-bit kernel...
 	gKernelArgs.platform_args.apm.version = 0;

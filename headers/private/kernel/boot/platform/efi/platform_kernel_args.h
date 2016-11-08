@@ -45,7 +45,19 @@ typedef struct {
 	// seems to be ignored entirely?
 
 	apm_info	apm;
+
+	uint64 _reserved[8];
 } _PACKED platform_kernel_args;
+
+typedef struct {
+	uint16		serial_base_ports[MAX_SERIAL_PORTS];
+
+	FixedWidthPointer<bios_drive> drives;
+		// this does not contain the boot drive
+	// seems to be ignored entirely?
+
+	apm_info	apm;
+} _PACKED platform_kernel_args_legacy;
 
 
 #endif	/* KERNEL_BOOT_PLATFORM_BIOS_IA32_KERNEL_ARGS_H */

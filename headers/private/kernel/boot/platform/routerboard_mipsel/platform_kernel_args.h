@@ -20,9 +20,8 @@
 
 
 typedef struct {
-	void*	whateverPointer;
-	char	whateverPath[128];
-} platform_kernel_args;
+	uint64 _reserved[8];
+} platform_kernel_args, platform_kernel_args_legacy;
 
 #endif /* _KERNEL_BOOT_PLATFORM_ROUTERBOARD_MIPSEL_KERNEL_ARGS_H */
 

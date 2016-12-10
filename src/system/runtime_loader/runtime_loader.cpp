@@ -212,7 +212,7 @@ try_open_executable(const char *dir, int dirLength, const char *name,
 		strcpy(path + dirLength + 1, name);
 	}
 
-	TRACE(("runtime_loader: try_open_container(): %s\n", path));
+	KTRACE("runtime_loader: try_open_container(): %s\n", path);
 
 	// Test if the target is a symbolic link, and correct the path in this case
 
@@ -251,8 +251,8 @@ search_executable_in_path_list(const char *name, const char *pathList,
 	const char *pathListEnd = pathList + pathListLen;
 	status_t status = B_ENTRY_NOT_FOUND;
 
-	TRACE(("runtime_loader: search_container_in_path_list() %s in %.*s\n", name,
-		pathListLen, pathList));
+	KTRACE("runtime_loader: search_container_in_path_list() %s in %.*s\n", name,
+		pathListLen, pathList);
 
 	while (pathListLen > 0) {
 		const char *pathEnd = pathList;

@@ -817,6 +817,7 @@ thread_hit_serious_debug_event(debug_debugger_message event,
 		Thread *thread = thread_get_current_thread();
 		dprintf("thread_hit_serious_debug_event(): Failed to install debugger: "
 			"thread: %" B_PRId32 ": %s\n", thread->id, strerror(error));
+		kernel_debugger("userland debugger failed; entering kernel debugger");
 		return error;
 	}
 

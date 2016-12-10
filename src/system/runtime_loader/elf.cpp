@@ -238,6 +238,7 @@ relocate_dependencies(image_t *image)
 static void
 init_dependencies(image_t *image, bool initHead)
 {
+	dprintf("enter init_dependencies\n");
 	image_t **initList;
 	ssize_t count, i;
 
@@ -251,11 +252,11 @@ init_dependencies(image_t *image, bool initHead)
 		initList[--count] = NULL;
 	}
 
-	TRACE(("%ld: init dependencies\n", find_thread(NULL)));
+	KTRACE("%d: init dependencies\n", find_thread(NULL));
 	for (i = 0; i < count; i++) {
 		image = initList[i];
 
-		TRACE(("%ld:  init: %s\n", find_thread(NULL), image->name));
+		KTRACE("%d:  init: %s\n", find_thread(NULL), image->name);
 
 		if (image->preinit_array) {
 			uint count_preinit = image->preinit_array_len / sizeof(addr_t);
@@ -272,9 +273,12 @@ init_dependencies(image_t *image, bool initHead)
 				((init_term_function)image->init_array[j])(image->id);
 		}
 
+		dprintf("&gRuntimeLoader @ %p\n", &gRuntimeLoader);
+		dprintf("test_executable @ %p\n", gRuntimeLoader.test_executable);
+
 		image_event(image, IMAGE_EVENT_INITIALIZED);
 	}
-	TRACE(("%ld:  init done.\n", find_thread(NULL)));
+	KTRACE("%d:  init done.\n", find_thread(NULL));
 
 	free(initList);
 }
@@ -285,12 +289,18 @@ inject_runtime_loader_api(image_t* rootImage)
 {
 	// We patch any exported __gRuntimeLoader symbols to point to our private
 	// API.
+	dprintf("runtime_loader: inject API\n");
 	image_t* image;
 	void* _export;
 	if (find_symbol_breadth_first(rootImage,
 			SymbolLookupInfo("__gRuntimeLoader", B_SYMBOL_TYPE_DATA), &image,
 			&_export) == B_OK) {
+		dprintf("found __gRuntimeLoader symbol @ %p\n", _export);
+		dprintf("&gRuntimeLoader = %p\n", &gRuntimeLoader);
+		dprintf("address of test_executable: %p\n", gRuntimeLoader.test_executable);
 		*(void**)_export = &gRuntimeLoader;
+	} else {
+		dprintf("couldn't find the runtime_loader API\n");
 	}
 }
 
@@ -1027,11 +1037,11 @@ terminate_program(void)
 		update_image_ids();
 	}
 
-	TRACE(("%ld: terminate dependencies\n", find_thread(NULL)));
+	KTRACE("%d: terminate dependencies\n", find_thread(NULL));
 	for (i = count; i-- > 0;) {
 		image_t *image = termList[i];
 
-		TRACE(("%ld:  term: %s\n", find_thread(NULL), image->name));
+		KTRACE("%d:  term: %s\n", find_thread(NULL), image->name);
 
 		image_event(image, IMAGE_EVENT_UNINITIALIZING);
 
@@ -1046,7 +1056,7 @@ terminate_program(void)
 
 		image_event(image, IMAGE_EVENT_UNLOADING);
 	}
-	TRACE(("%ld:  term done.\n", find_thread(NULL)));
+	KTRACE("%d:  term done.\n", find_thread(NULL));
 
 	free(termList);
 }

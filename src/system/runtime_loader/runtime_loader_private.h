@@ -24,6 +24,8 @@
 #endif
 
 
+#undef RUNTIME_LOADER_TRACING
+#define RUNTIME_LOADER_TRACING 1
 #if RUNTIME_LOADER_TRACING
 #	define KTRACE(x...)	ktrace_printf(x)
 #else

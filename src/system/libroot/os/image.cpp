@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 
 #include <algorithm>
 #include <new>
@@ -16,6 +17,7 @@
 
 #include <AutoDeleter.h>
 
+#include <debug.h>
 #include <libroot_private.h>
 #include <runtime_loader.h>
 #include <syscalls.h>
@@ -210,15 +212,22 @@ load_image(int32 argCount, const char **args, const char **environ)
 	if (argCount < 1 || environ == NULL)
 		return B_BAD_VALUE;
 
+	debug_printf("load_image:\n");
+	debug_printf("__gRuntimeLoader address: %p\n", __gRuntimeLoader);
+
 	// test validity of executable + support for scripts
 	{
+		debug_printf("calling __test_executable\n");
 		status_t status = __test_executable(args[0], invoker);
+		debug_printf("done\n");
 		if (status < B_OK)
 			return status;
 
 		if (invoker[0]) {
+			debug_printf("calling __parse_invoke_line\n");
 			status = __parse_invoke_line(invoker, &newArgs,
 				(char * const **)&args, &argCount, args[0]);
+			debug_printf("done\n");
 			if (status < B_OK)
 				return status;
 		}
@@ -230,18 +239,23 @@ load_image(int32 argCount, const char **args, const char **environ)
 
 	char** flatArgs = NULL;
 	size_t flatArgsSize;
+	debug_printf("calling __flatten_process_args\n");
 	status_t status = __flatten_process_args(args, argCount, environ,
 		&envCount, args[0], &flatArgs, &flatArgsSize);
+	debug_printf("done\n");
 
 	if (status == B_OK) {
+		debug_printf("calling _kern_load_image\n");
 		thread = _kern_load_image(flatArgs, flatArgsSize, argCount, envCount,
 			B_NORMAL_PRIORITY, B_WAIT_TILL_LOADED, -1, 0);
+		debug_printf("done\n");
 
 		free(flatArgs);
 	} else
 		thread = status;
 
 	free(newArgs);
+	debug_printf("leaving load_image\n");
 	return thread;
 }
 
@@ -252,6 +266,7 @@ load_add_on(char const *name)
 	if (name == NULL)
 		return B_BAD_VALUE;
 
+	debug_printf("=> load_add_on\n");
 	return __gRuntimeLoader->load_add_on(name, 0);
 }
 
@@ -259,6 +274,7 @@ load_add_on(char const *name)
 status_t
 unload_add_on(image_id id)
 {
+	debug_printf("=> unload_add_on\n");
 	return __gRuntimeLoader->unload_add_on(id);
 }
 
@@ -267,6 +283,7 @@ status_t
 get_image_symbol(image_id id, char const *symbolName, int32 symbolType,
 	void **_location)
 {
+	debug_printf("=> get_image_symbol\n");
 	return __gRuntimeLoader->get_image_symbol(id, symbolName, symbolType,
 		false, NULL, _location);
 }
@@ -276,6 +293,7 @@ status_t
 get_image_symbol_etc(image_id id, char const *symbolName, int32 symbolType,
 	bool recursive, image_id *_inImage, void **_location)
 {
+	debug_printf("=> get_image_symbol_etc\n");
 	return __gRuntimeLoader->get_image_symbol(id, symbolName, symbolType,
 		recursive, _inImage, _location);
 }
@@ -285,6 +303,7 @@ status_t
 get_nth_image_symbol(image_id id, int32 num, char *nameBuffer, int32 *_nameLength,
 	int32 *_symbolType, void **_location)
 {
+	debug_printf("=> get_nth_image_symbol\n");
 	return __gRuntimeLoader->get_nth_image_symbol(id, num, nameBuffer, _nameLength, _symbolType, _location);
 }
 
@@ -292,6 +311,7 @@ get_nth_image_symbol(image_id id, int32 num, char *nameBuffer, int32 *_nameLengt
 status_t
 _get_image_info(image_id id, image_info *info, size_t infoSize)
 {
+	debug_printf("called _kern_get_image_info\n");
 	return _kern_get_image_info(id, info, infoSize);
 }
 
@@ -299,6 +319,7 @@ _get_image_info(image_id id, image_info *info, size_t infoSize)
 status_t
 _get_next_image_info(team_id team, int32 *cookie, image_info *info, size_t infoSize)
 {
+	debug_printf("called _kern_get_next_image_info\n");
 	return _kern_get_next_image_info(team, cookie, info, infoSize);
 }
 
@@ -306,6 +327,7 @@ _get_next_image_info(team_id team, int32 *cookie, image_info *info, size_t infoS
 void
 clear_caches(void *address, size_t length, uint32 flags)
 {
+	debug_printf("called _kern_clear_caches\n");
 	_kern_clear_caches(address, length, flags);
 }
 
@@ -397,6 +419,7 @@ __parse_invoke_line(char *invoker, char ***_newArgs,
 status_t
 __get_next_image_dependency(image_id id, uint32 *cookie, const char **_name)
 {
+	debug_printf("=> __get_next_image_dependency\n");
 	return __gRuntimeLoader->get_next_image_dependency(id, cookie, _name);
 }
 
@@ -404,6 +427,9 @@ __get_next_image_dependency(image_id id, uint32 *cookie, const char **_name)
 status_t
 __test_executable(const char *path, char *invoker)
 {
+	debug_printf("=> __test_executable\n");
+	debug_printf("__gRuntimeLoader @ %p\n", __gRuntimeLoader);
+	debug_printf("__gRuntimeLoader->test_executable @ %p\n", __gRuntimeLoader->test_executable);
 	return __gRuntimeLoader->test_executable(path, invoker);
 }
 

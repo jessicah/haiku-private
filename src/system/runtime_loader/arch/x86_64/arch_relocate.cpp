@@ -30,8 +30,8 @@ relocate_rela(image_t* rootImage, image_t* image, Elf64_Rela* rel,
 			status_t status = resolve_symbol(rootImage, image, sym, cache,
 				&symAddr, &symbolImage);
 			if (status != B_OK) {
-				TRACE(("resolve symbol \"%s\" returned: %" B_PRId32 "\n",
-					SYMNAME(image, sym), status));
+				KTRACE("resolve symbol \"%s\" returned: %" B_PRId32 "\n",
+					SYMNAME(image, sym), status);
 				printf("resolve symbol \"%s\" returned: %" B_PRId32 "\n",
 					SYMNAME(image, sym), status);
 				return status;
@@ -66,7 +66,7 @@ relocate_rela(image_t* rootImage, image_t* image, Elf64_Rela* rel,
 				relocValue = symAddr;
 				break;
 			default:
-				TRACE(("unhandled relocation type %d\n", type));
+				KTRACE("unhandled relocation type %d\n", type);
 				return B_BAD_DATA;
 		}
 

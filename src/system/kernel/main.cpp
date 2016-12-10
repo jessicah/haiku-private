@@ -128,6 +128,78 @@ _start(kernel_args *bootKernelArgs, int currentCPU)
 		dprintf("Welcome to kernel debugger output!\n");
 		dprintf("Haiku revision: %s\n", get_haiku_revision());
 
+		// dump the kernel args
+		dprintf("kernel args:\n");
+		dprintf("  size: %" B_PRIu32 "\n", sKernelArgs.kernel_args_size);
+		dprintf("  version: %" B_PRIu32 "\n", sKernelArgs.version);
+		dprintf("  kernel image (addr): %p\n", sKernelArgs.kernel_image.Pointer());
+		dprintf("  preloaded images (addr): %p\n", sKernelArgs.preloaded_images.Pointer());
+		dprintf("  physical memory ranges:\n");
+		for (unsigned int i = 0; i < sKernelArgs.num_physical_memory_ranges; ++i) {
+			dprintf("    start: 0x%" B_PRIx64 "\n", sKernelArgs.physical_memory_range[i].start);
+			dprintf("     size: 0x%" B_PRIx64 "\n", sKernelArgs.physical_memory_range[i].size);
+		}
+		dprintf("  physical allocated memory ranges:\n");
+		for (unsigned int i = 0; i < sKernelArgs.num_physical_allocated_ranges; ++i) {
+			dprintf("    start: 0x%" B_PRIx64 "\n", sKernelArgs.physical_allocated_range[i].start);
+			dprintf("     size: 0x%" B_PRIx64 "\n", sKernelArgs.physical_allocated_range[i].size);
+		}
+		dprintf("  virtual allocated memory ranges:\n");
+		for (unsigned int i = 0; i < sKernelArgs.num_virtual_allocated_ranges; ++i) {
+			dprintf("    start: 0x%" B_PRIx64 "\n", sKernelArgs.virtual_allocated_range[i].start);
+			dprintf("     size: 0x%" B_PRIx64 "\n", sKernelArgs.virtual_allocated_range[i].size);
+		}
+		dprintf("  kernel args memory ranges:\n");
+		for (unsigned int i = 0; i < sKernelArgs.num_kernel_args_ranges; ++i) {
+			dprintf("    start: 0x%" B_PRIx64 "\n", sKernelArgs.kernel_args_range[i].start);
+			dprintf("     size: 0x%" B_PRIx64 "\n", sKernelArgs.kernel_args_range[i].size);
+		}
+		dprintf("  ignored physical memory: 0x%" B_PRIx64 "\n", sKernelArgs.ignored_physical_memory);
+		dprintf("  total CPUs: %" B_PRIu32 "\n", sKernelArgs.num_cpus);
+		dprintf("  CPU kernel stacks:\n");
+		for (unsigned int i = 0; i < sKernelArgs.num_cpus; ++i) {
+			dprintf("    start: 0x%" B_PRIx64 "\n", sKernelArgs.cpu_kstack[i].start);
+			dprintf("     size: 0x%" B_PRIx64 "\n", sKernelArgs.cpu_kstack[i].size);
+		}
+		dprintf("  boot volume (addr): %p\n", sKernelArgs.boot_volume.Pointer());
+		dprintf("  boot volume size: %" B_PRId32 "\n", sKernelArgs.boot_volume_size);
+		dprintf("  driver settings (addr): %p\n", sKernelArgs.driver_settings.Pointer());
+		dprintf("  framebuffer settings:\n");
+		dprintf("    buffer start: 0x%" B_PRIx64 "\n", sKernelArgs.frame_buffer.physical_buffer.start);
+		dprintf("    buffer size:  0x%" B_PRIx64 "\n", sKernelArgs.frame_buffer.physical_buffer.size);
+		dprintf("    bytes per row: %" B_PRIu32 "\n", sKernelArgs.frame_buffer.bytes_per_row);
+		dprintf("    mode: %" B_PRIu16 "x%" B_PRIu16 "x%" B_PRIu8 "\n", sKernelArgs.frame_buffer.width, sKernelArgs.frame_buffer.height, sKernelArgs.frame_buffer.depth);
+		dprintf("    enabled: %s\n", sKernelArgs.frame_buffer.enabled ? "true" : "false");
+		dprintf("  debug output (addr): %p\n", sKernelArgs.debug_output.Pointer());
+		dprintf("  debug output size: %" B_PRIu32 "\n", sKernelArgs.debug_size);
+		dprintf("  previous debug output (addr) %p\n", sKernelArgs.previous_debug_output.Pointer());
+		dprintf("  previous debug output size: %" B_PRIu32 "\n", sKernelArgs.previous_debug_size);
+		dprintf("  keep debug output buffer: %s\n", sKernelArgs.keep_debug_output_buffer ? "true" : "false");
+		dprintf("arch kernel args:\n");
+		dprintf("  system time cv factor: %" B_PRIu32 "\n", sKernelArgs.arch_args.system_time_cv_factor);
+		dprintf("  cpu clock speed: %" B_PRIu64 "\n", sKernelArgs.arch_args.cpu_clock_speed);
+		dprintf("  page dir (phys): 0x%" B_PRIx32 "\n", sKernelArgs.arch_args.phys_pgdir);
+		dprintf("  page dir (virt): 0x%" B_PRIx64 "\n", sKernelArgs.arch_args.vir_pgdir);
+		dprintf("  number of page tables: %" B_PRIu32 "\n", sKernelArgs.arch_args.num_pgtables);
+		dprintf("  boot page tables:\n");
+		for (int i = 0; i < MAX_BOOT_PTABLES; ++i) {
+			dprintf("    page table: 0x%" B_PRIx32 "\n", sKernelArgs.arch_args.pgtables[i]);
+		}
+		dprintf("  virtual end: 0x%" B_PRIx64 "\n", sKernelArgs.arch_args.virtual_end);
+		dprintf("  page hole: %" B_PRIu64 "\n", sKernelArgs.arch_args.page_hole);
+		dprintf("  apic time cv factor: %" B_PRIu32 "\n", sKernelArgs.arch_args.apic_time_cv_factor);
+		dprintf("  apic (phys): 0x%" B_PRIx32 "\n", sKernelArgs.arch_args.apic_phys);
+		dprintf("  apic (virt): %p\n", sKernelArgs.arch_args.apic.Pointer());
+		dprintf("  ioapic (phys): 0x%" B_PRIx32 "\n", sKernelArgs.arch_args.ioapic_phys);
+		dprintf("  per-cpu apic:\n");
+		for (int i = 0; i < sKernelArgs.num_cpus; ++i) {
+			dprintf("    apic id: %" B_PRIu32 "\n", sKernelArgs.arch_args.cpu_apic_id[i]);
+			dprintf("    apic version: %" B_PRIu32 "\n", sKernelArgs.arch_args.cpu_apic_version[i]);
+		}
+		dprintf("  hpet (phys): 0x%" B_PRIx32 "\n", sKernelArgs.arch_args.hpet_phys);
+		dprintf("  hpet (virt): %p\n", sKernelArgs.arch_args.hpet.Pointer());
+		dprintf("  acpi root: %p\n", sKernelArgs.arch_args.acpi_root.Pointer());
+
 		// init modules
 		TRACE("init CPU\n");
 		cpu_init(&sKernelArgs);

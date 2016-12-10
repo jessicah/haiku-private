@@ -54,8 +54,8 @@ using namespace BPrivate;
 
 
 // debugging
-//#define DBG(x) x
-#define DBG(x)
+#define DBG(x) x
+//#define DBG(x)
 #ifdef DEBUG_PRINTF
 #	define OUT DEBUG_PRINTF
 #else

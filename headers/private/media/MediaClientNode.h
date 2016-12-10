@@ -71,12 +71,12 @@ protected:
 								media_node_id* timesource);
 
 	virtual	status_t		Connected(const media_source& source,
-								const media_destination& where,
+								const media_destination& dest,
 								const media_format& format,
 								media_input* outInput);
 
 	virtual	void			Disconnected(const media_source& source,
-								const media_destination& where);
+								const media_destination& dest);
 
 	virtual	status_t		FormatChanged(const media_source& source,
 								const media_destination& consumer,
@@ -131,14 +131,6 @@ private:
 				void		_HandleBuffer(BBuffer* buffer);
 				void		_ProduceNewBuffer(const media_timed_event* event,
 								bigtime_t late);
-
-				void		_HandleStart(bigtime_t performanceTime);
-				void		_HandleStop(bigtime_t performanceTime,
-								bool immediate);
-				void		_HandleSeek(bigtime_t mediaTime,
-								bigtime_t performanceTime);
-				void		_HandleTimeWarp(bigtime_t realTime,
-								bigtime_t performanceTime);
 
 			BMediaClient*	fOwner;
 };

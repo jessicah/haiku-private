@@ -5,11 +5,11 @@
 #ifndef REMOTE_DEBUG_REQUEST_H
 #define REMOTE_DEBUG_REQUEST_H
 
-#include "Types.h"
+#include <OS.h>
 
 #include <Referenceable.h>
 
-#include <OS.h>
+#include "Types.h"
 
 
 enum remote_request_type {
@@ -23,10 +23,10 @@ enum remote_request_type {
 	REMOTE_REQUEST_TYPE_SINGLE_STEP_THREAD,
 	REMOTE_REQUEST_TYPE_GET_CPU_STATE,
 	REMOTE_REQUEST_TYPE_SET_CPU_STATE,
-	REMOTE_REQUEST_TYPE_SET_BREAKPOINT,
-	REMOTE_REQUEST_TYPE_CLEAR_BREAKPOINT,
-	REMOTE_REQUEST_TYPE_SET_WATCHPOINT,
-	REMOTE_REQUEST_TYPE_CLEAR_WATCHPOINT,
+	REMOTE_REQUEST_TYPE_INSTALL_BREAKPOINT,
+	REMOTE_REQUEST_TYPE_UNINSTALL_BREAKPOINT,
+	REMOTE_REQUEST_TYPE_INSTALL_WATCHPOINT,
+	REMOTE_REQUEST_TYPE_UNINSTALL_WATCHPOINT,
 	REMOTE_REQUEST_TYPE_PREPARE_HANDOVER,
 	REMOTE_REQUEST_TYPE_WRITE_CORE_FILE,
 
@@ -293,6 +293,85 @@ protected:
 private:
 			thread_id			fThread;
 			CpuState*			fCpuState;
+};
+
+
+// abstract base for the various actions that influence how the CPU
+// reacts to a particular memory address, ergo break/watchpoints.
+class RemoteDebugAddressActionRequest : public RemoteDebugRequest {
+public:
+								RemoteDebugAddressActionRequest();
+	virtual						~RemoteDebugAddressActionRequest();
+
+			void				SetTo(target_addr_t address);
+
+			target_addr_t		Address() const	{ return fAddress; }
+
+protected:
+	virtual	status_t			LoadSpecificInfoFromMessage(
+									const BMessage& data);
+	virtual	status_t			SaveSpecificInfoToMessage(
+									BMessage& _output) const;
+
+private:
+			target_addr_t		fAddress;
+};
+
+
+class RemoteDebugInstallBreakpointRequest
+	: public RemoteDebugAddressActionRequest {
+public:
+								RemoteDebugInstallBreakpointRequest();
+	virtual						~RemoteDebugInstallBreakpointRequest();
+
+	virtual	remote_request_type	Type() const;
+};
+
+
+class RemoteDebugUninstallBreakpointRequest
+	: public RemoteDebugAddressActionRequest {
+public:
+								RemoteDebugUninstallBreakpointRequest();
+	virtual						~RemoteDebugUninstallBreakpointRequest();
+
+	virtual	remote_request_type	Type() const;
+};
+
+
+class RemoteDebugInstallWatchpointRequest : public RemoteDebugRequest {
+public:
+								RemoteDebugInstallWatchpointRequest();
+	virtual						~RemoteDebugInstallWatchpointRequest();
+
+			void				SetTo(target_addr_t address, uint32 type,
+									int32 length);
+
+			target_addr_t		Address() const		{ return fAddress; }
+			uint32				WatchType() const	{ return fWatchType; }
+			int32				Length() const		{ return fLength; }
+
+	virtual	remote_request_type	Type() const;
+
+protected:
+	virtual	status_t			LoadSpecificInfoFromMessage(
+									const BMessage& data);
+	virtual	status_t			SaveSpecificInfoToMessage(
+									BMessage& _output) const;
+
+private:
+			target_addr_t		fAddress;
+			uint32				fWatchType;
+			int32				fLength;
+};
+
+
+class RemoteDebugUninstallWatchpointRequest
+	: public RemoteDebugAddressActionRequest {
+public:
+								RemoteDebugUninstallWatchpointRequest();
+	virtual						~RemoteDebugUninstallWatchpointRequest();
+
+	virtual	remote_request_type	Type() const;
 };
 
 

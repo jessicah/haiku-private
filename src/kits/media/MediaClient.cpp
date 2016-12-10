@@ -5,6 +5,8 @@
 
 #include "MediaClient.h"
 
+#include <MediaConnection.h>
+
 #include <MediaRoster.h>
 #include <TimeSource.h>
 
@@ -12,14 +14,17 @@
 
 
 BMediaClient::BMediaClient(const char* name,
-	media_type type, uint64 capability)
+	media_type type, media_client_kinds kinds)
 	:
-	fCapabilities(capability)
+	fLastID(0)
 {
 	CALLED();
 
 	fNode = new BMediaClientNode(name, this, type);
 	_Init();
+
+	fClient.node = fNode->Node();
+	fClient.kinds = kinds;
 }
 
 
@@ -28,6 +33,13 @@ BMediaClient::~BMediaClient()
 	CALLED();
 
 	_Deinit();
+}
+
+
+const media_client&
+BMediaClient::Client() const
+{
+	return fClient;
 }
 
 
@@ -40,17 +52,17 @@ BMediaClient::InitCheck() const
 }
 
 
-uint64
-BMediaClient::Capabilities() const
+media_client_kinds
+BMediaClient::Kinds() const
 {
 	CALLED();
 
-	return fCapabilities;
+	return fClient.Kinds();
 }
 
 
 media_type
-BMediaClient::Type() const
+BMediaClient::MediaType() const
 {
 	CALLED();
 
@@ -59,68 +71,34 @@ BMediaClient::Type() const
 }
 
 
-BMediaConnection*
-BMediaClient::BeginConnection(media_connection_kind kind)
+status_t
+BMediaClient::RegisterInput(BMediaInput* input)
 {
-	CALLED();
-
-	BMediaConnection* conn = new BMediaConnection(this, kind);
-	AddConnection(conn);
-	return conn;
-}
-
-
-BMediaConnection*
-BMediaClient::BeginConnection(const media_input& input)
-{
-	CALLED();
-
-	BMediaConnection* conn = new BMediaConnection(this, input);
-	AddConnection(conn);
-	return conn;
-}
-
-
-BMediaConnection*
-BMediaClient::BeginConnection(const media_output& output)
-{
-	CALLED();
-
-	BMediaConnection* conn = new BMediaConnection(this, output);
-	AddConnection(conn);
-	return conn;
-}
-
-
-BMediaConnection*
-BMediaClient::BeginConnection(BMediaConnection* connection)
-{
-	CALLED();
-
-	if (connection->fOwner == this)
-		return NULL;
-
-	BMediaConnection* ret = NULL;
-	if (_TranslateConnection(ret, connection) == B_OK) {
-		AddConnection(ret);
-		return ret;
-	}
-	return NULL;
+	input->ConnectionRegistered(this, fLastID++);
+	AddInput(input);
+	return B_OK;
 }
 
 
 status_t
-BMediaClient::Bind(BMediaConnection* input, BMediaConnection* output)
+BMediaClient::RegisterOutput(BMediaOutput* output)
+{
+	output->ConnectionRegistered(this, fLastID++);
+	AddOutput(output);
+	return B_OK;
+}
+
+
+status_t
+BMediaClient::Bind(BMediaInput* input, BMediaOutput* output)
 {
 	CALLED();
 
-	if (input->fOwner != this || output->fOwner != this)
-		return B_ERROR;
-	else if (!input->IsInput() || !output->IsOutput())
-		return B_ERROR;
-
 	if (input == NULL
 		|| output == NULL)
+		return B_ERROR;
+
+	if (input->fOwner != this || output->fOwner != this)
 		return B_ERROR;
 
 	// TODO: Implement binding one input to more outputs.
@@ -135,17 +113,15 @@ BMediaClient::Bind(BMediaConnection* input, BMediaConnection* output)
 
 
 status_t
-BMediaClient::Unbind(BMediaConnection* input, BMediaConnection* output)
+BMediaClient::Unbind(BMediaInput* input, BMediaOutput* output)
 {
 	CALLED();
 
-	if (input->fOwner != this || output->fOwner != this)
-		return B_ERROR;
-	else if (!input->IsInput() || !output->IsOutput())
-		return B_ERROR;
-
 	if (input == NULL
 		|| input == NULL)
+		return B_ERROR;
+
+	if (input->fOwner != this || output->fOwner != this)
 		return B_ERROR;
 
 	input->fBind = NULL;
@@ -160,10 +136,20 @@ BMediaClient::Connect(BMediaConnection* ourConnection,
 {
 	CALLED();
 
-	if (ourConnection->IsOutput() && theirConnection->IsInput())
-		return _ConnectInput(ourConnection, theirConnection);
-	else if (ourConnection->IsInput() && theirConnection->IsOutput())
-		return _ConnectOutput(ourConnection, theirConnection);
+	return Connect(ourConnection, theirConnection->Connection());
+}
+
+
+status_t
+BMediaClient::Connect(BMediaConnection* ourConnection,
+	const media_connection& theirConnection)
+{
+	CALLED();
+
+	if (ourConnection->IsOutput() && theirConnection.IsInput())
+		return _ConnectInput((BMediaOutput*)ourConnection, theirConnection);
+	else if (ourConnection->IsInput() && theirConnection.IsOutput())
+		return _ConnectOutput((BMediaInput*)ourConnection, theirConnection);
 
 	return B_ERROR;
 }
@@ -171,24 +157,7 @@ BMediaClient::Connect(BMediaConnection* ourConnection,
 
 status_t
 BMediaClient::Connect(BMediaConnection* connection,
-	const dormant_node_info& dormantInfo)
-{
-	CALLED();
-
-	media_node node;
-	status_t err = BMediaRoster::CurrentRoster()->InstantiateDormantNode(
-		dormantInfo, &node, B_FLAVOR_IS_GLOBAL);
-
-	if (err != B_OK)
-		return err;
-
-	return Connect(connection, node);
-}
-
-
-status_t
-BMediaClient::Connect(BMediaConnection* connection,
-	const media_node& node)
+	const media_client& client)
 {
 	CALLED();
 
@@ -213,42 +182,6 @@ BMediaClient::Disconnect()
 }
 
 
-status_t
-BMediaClient::DisconnectConnection(BMediaConnection* conn)
-{
-	CALLED();
-
-	return B_OK;
-}
-
-
-status_t
-BMediaClient::ResetConnection(BMediaConnection* conn)
-{
-	CALLED();
-
-	return B_OK;
-}
-
-
-status_t
-BMediaClient::ReleaseConnection(BMediaConnection* conn)
-{
-	CALLED();
-
-	return B_OK;
-}
-
-
-int32
-BMediaClient::CountConnections() const
-{
-	CALLED();
-
-	return fOutputs.CountItems()+fInputs.CountItems();
-}
-
-
 int32
 BMediaClient::CountInputs() const
 {
@@ -267,7 +200,7 @@ BMediaClient::CountOutputs() const
 }
 
 
-BMediaConnection*
+BMediaInput*
 BMediaClient::InputAt(int32 index) const
 {
 	CALLED();
@@ -276,7 +209,7 @@ BMediaClient::InputAt(int32 index) const
 }
 
 
-BMediaConnection*
+BMediaOutput*
 BMediaClient::OutputAt(int32 index) const
 {
 	CALLED();
@@ -285,8 +218,32 @@ BMediaClient::OutputAt(int32 index) const
 }
 
 
-BMediaConnection*
-BMediaClient::FindConnection(const media_destination& dest) const
+BMediaInput*
+BMediaClient::FindInput(const media_connection& input) const
+{
+	CALLED();
+
+	if (!input.IsInput())
+		return NULL;
+
+	return FindInput(input.Destination());
+}
+
+
+BMediaOutput*
+BMediaClient::FindOutput(const media_connection& output) const
+{
+	CALLED();
+
+	if (!output.IsOutput())
+		return NULL;
+
+	return FindOutput(output.Source());
+}
+
+
+BMediaInput*
+BMediaClient::FindInput(const media_destination& dest) const
 {
 	CALLED();
 
@@ -298,8 +255,8 @@ BMediaClient::FindConnection(const media_destination& dest) const
 }
 
 
-BMediaConnection*
-BMediaClient::FindConnection(const media_source& source) const
+BMediaOutput*
+BMediaClient::FindOutput(const media_source& source) const
 {
 	CALLED();
 
@@ -327,7 +284,7 @@ BMediaClient::Start(bool force)
 
 	status_t err = B_OK;
 	for (int32 i = 0; i < CountOutputs(); i++) {
-		media_node remoteNode = OutputAt(i)->fRemoteNode;
+		media_node remoteNode = OutputAt(i)->Connection().RemoteNode();
 		if (remoteNode.kind & B_TIME_SOURCE)
 			err = BMediaRoster::CurrentRoster()->StartTimeSource(
 				remoteNode, BTimeSource::RealTime());
@@ -424,12 +381,12 @@ BMediaClient::SetRunMode(BMediaNode::run_mode mode)
 
 
 status_t
-BMediaClient::SetTimeSource(media_node timesource)
+BMediaClient::SetTimeSource(const media_client& timesource)
 {
 	CALLED();
 
 	return BMediaRoster::CurrentRoster()->SetTimeSourceFor(fNode->Node().node,
-		timesource.node);
+		timesource.node.node);
 }
 
 
@@ -454,52 +411,29 @@ BMediaClient::SetLatencyRange(bigtime_t min, bigtime_t max)
 
 
 bigtime_t
-BMediaClient::OfflineTime() const
+BMediaClient::CurrentTime() const
 {
 	CALLED();
 
-	return fOfflineTime;
-}
-
-
-bigtime_t
-BMediaClient::PerformanceTime() const
-{
-	CALLED();
-
-	return fPerformanceTime;
-}
-
-
-status_t
-BMediaClient::SendBuffer(BMediaConnection* connection, BBuffer* buffer)
-{
-	CALLED();
-
-	return fNode->SendBuffer(buffer, connection);
+	return fCurrentTime;
 }
 
 
 void
-BMediaClient::AddConnection(BMediaConnection* connection)
+BMediaClient::AddInput(BMediaInput* input)
 {
 	CALLED();
 
-	if (connection->IsInput())
-		fInputs.AddItem(connection);
-	else
-		fOutputs.AddItem(connection);
+	fInputs.AddItem(input);
 }
 
 
 void
-BMediaClient::BufferReceived(BMediaConnection* connection,
-	BBuffer* buffer)
+BMediaClient::AddOutput(BMediaOutput* output)
 {
 	CALLED();
 
-	if (connection->fProcessHook != NULL)
-		connection->fProcessHook(connection, buffer);
+	fOutputs.AddItem(output);
 }
 
 
@@ -513,12 +447,48 @@ BMediaClient::AddOn(int32* id) const
 
 
 void
-BMediaClient::SetNotificationHook(notify_hook notifyHook, void* cookie)
+BMediaClient::HandleStart(bigtime_t performanceTime)
 {
-	CALLED();
+}
 
-	fNotifyHook = notifyHook;
-	fNotifyCookie = cookie;
+
+void
+BMediaClient::HandleStop(bigtime_t performanceTime)
+{
+}
+
+
+void
+BMediaClient::HandleSeek(bigtime_t mediaTime, bigtime_t performanceTime)
+{
+}
+
+
+void
+BMediaClient::HandleTimeWarp(bigtime_t realTime, bigtime_t performanceTime)
+{
+}
+
+
+status_t
+BMediaClient::HandleFormatSuggestion(media_type type, int32 quality,
+	media_format* format)
+{
+	return B_ERROR;
+}
+
+
+status_t
+BMediaClient::ConnectionReleased(BMediaConnection* connection)
+{
+	return B_OK;
+}
+
+
+status_t
+BMediaClient::ConnectionDisconnected(BMediaConnection* connection)
+{
+	return B_OK;
 }
 
 
@@ -526,9 +496,6 @@ void
 BMediaClient::_Init()
 {
 	CALLED();
-
-	fNotifyHook = NULL;
-	fNotifyCookie = NULL;
 
 	BMediaRoster* roster = BMediaRoster::Roster(&fInitErr);
 	if (fInitErr == B_OK && roster != NULL)
@@ -551,50 +518,36 @@ BMediaClient::_Deinit()
 
 
 status_t
-BMediaClient::_TranslateConnection(BMediaConnection* dest,
-	BMediaConnection* source)
+BMediaClient::_ConnectInput(BMediaOutput* output,
+	const media_connection& input)
 {
 	CALLED();
 
-	return B_ERROR;
+	if (input.Destination() == media_destination::null)
+		return B_MEDIA_BAD_DESTINATION;
+
+	media_output ourOutput = output->Connection().MediaOutput();
+	media_input theirInput = input.MediaInput();
+	media_format format = output->AcceptedFormat();
+
+	return BMediaRoster::CurrentRoster()->Connect(ourOutput.source,
+		theirInput.destination, &format, &ourOutput, &theirInput,
+		BMediaRoster::B_CONNECT_MUTED);
 }
 
 
 status_t
-BMediaClient::_Connect(BMediaConnection* connection,
-	media_node node)
+BMediaClient::_ConnectOutput(BMediaInput* input,
+	const media_connection& output)
 {
 	CALLED();
 
-	return B_ERROR;
-}
-
-
-status_t
-BMediaClient::_ConnectInput(BMediaConnection* output,
-	BMediaConnection* input)
-{
-	CALLED();
-
-	return B_ERROR;
-}
-
-
-status_t
-BMediaClient::_ConnectOutput(BMediaConnection* input,
-	BMediaConnection* output)
-{
-	CALLED();
-
-	if (output->Source() == media_source::null)
+	if (output.Source() == media_source::null)
 		return B_MEDIA_BAD_SOURCE;
 
-	media_input ourInput;
-	media_output theirOutput;
+	media_input ourInput = input->Connection().MediaInput();
+	media_output theirOutput = output.MediaOutput();
 	media_format format = input->AcceptedFormat();
-
-	input->BuildMediaInput(&ourInput);
-	output->BuildMediaOutput(&theirOutput);
 
 	// TODO manage the node problems
 	//fNode->ActivateInternalConnect(false);

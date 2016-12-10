@@ -38,14 +38,14 @@ rule DefineDefaultBuildProfiles
 	DefineBuildProfile release-vmware : vmware-image : "haiku-release.vmdk" ;
 	DefineBuildProfile release-cd : cd-image : "haiku-release.iso" ;
 	DefineBuildProfile release-anyboot : anyboot-image
-		: "haiku-release-anyboot.image" ;
+		: "haiku-release-anyboot.iso" ;
 
 	# nightly profiles
 	DefineBuildProfile nightly-raw : image : "haiku-nightly.image" ;
 	DefineBuildProfile nightly-vmware : vmware-image : "haiku-nightly.vmdk" ;
 	DefineBuildProfile nightly-cd : cd-image : "haiku-nightly.iso" ;
 	DefineBuildProfile nightly-anyboot : anyboot-image
-		: "haiku-nightly-anyboot.image" ;
+		: "haiku-nightly-anyboot.iso" ;
 
 	# bootstrap profiles
 	DefineBuildProfile bootstrap-raw : image : "haiku-bootstrap.image" ;
@@ -53,14 +53,14 @@ rule DefineDefaultBuildProfiles
 	DefineBuildProfile bootstrap-vmware : vmware-image
 		: "haiku-bootstrap.vmdk" ;
 	DefineBuildProfile bootstrap-anyboot : anyboot-image
-		: "haiku-bootstrap-anyboot.image" ;
+		: "haiku-bootstrap-anyboot.iso" ;
 
 	# minimum profiles
 	DefineBuildProfile minimum-raw : image : "haiku-minimum.image" ;
 	DefineBuildProfile minimum-mmc : haiku-mmc-image : "haiku-minimum.mmc" ;
 	DefineBuildProfile minimum-vmware : vmware-image : "haiku-minimum.vmdk" ;
 	DefineBuildProfile minimum-anyboot : anyboot-image
-		: "haiku-minimum-anyboot.image" ;
+		: "haiku-minimum-anyboot.iso" ;
 
 
 	switch $(HAIKU_BUILD_PROFILE) {
@@ -75,12 +75,12 @@ rule DefineDefaultBuildProfiles
 			AddHaikuImagePackages
 				bepdf
 				cvs
-				dejavu
 				keymapswitcher
 				llvm
 				man
 				mercurial
 				nano
+				noto
 				openssh
 				p7zip
 				pe
@@ -130,9 +130,9 @@ rule DefineDefaultBuildProfiles
 			HAIKU_IMAGE_SIZE ?= 600 ;
 
 			AddHaikuImagePackages
-				dejavu
 				man
 				nano
+				noto
 				openssh
 				openssl
 				p7zip
@@ -164,7 +164,6 @@ rule DefineDefaultBuildProfiles
 				binutils
 				bison
 				curl_devel
-				dejavu
 				expat
 				flex
 				freetype_devel
@@ -179,6 +178,7 @@ rule DefineDefaultBuildProfiles
 				make
 				ncurses6
 				ncurses6_devel
+				noto
 				python
 				sed
 				texinfo

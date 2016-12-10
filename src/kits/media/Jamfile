@@ -27,9 +27,10 @@ for architectureObject in [ MultiArchSubDirSetup ] {
 			AdapterIO.cpp
 			MediaIO.cpp
 			MediaClient.cpp
+			MediaClientDefs.cpp
 			MediaConnection.cpp
 			MediaRecorder.cpp
-
+			SimpleMediaClient.cpp
 
 			# Public Media Kit
 			Buffer.cpp

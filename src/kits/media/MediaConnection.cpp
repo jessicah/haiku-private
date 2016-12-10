@@ -5,9 +5,35 @@
 
 #include <MediaConnection.h>
 
-#include <MediaClient.h>
-
 #include "debug.h"
+
+
+BMediaConnection::BMediaConnection(media_connection_kinds kinds)
+	:
+	fOwner(NULL),
+	fBind(NULL),
+	fBufferGroup(NULL)
+{
+	CALLED();
+
+	fConnection.kinds = kinds;
+	fConnection.id = 0;
+	//fConnection.client = media_client::null;
+}
+
+
+BMediaConnection::~BMediaConnection()
+{
+	CALLED();
+
+}
+
+
+const media_connection&
+BMediaConnection::Connection() const
+{
+	return fConnection;
+}
 
 
 bool
@@ -15,7 +41,7 @@ BMediaConnection::IsOutput() const
 {
 	CALLED();
 
-	return fKind == B_MEDIA_OUTPUT;
+	return fConnection.IsOutput();
 }
 
 
@@ -24,49 +50,7 @@ BMediaConnection::IsInput() const
 {
 	CALLED();
 
-	return fKind == B_MEDIA_INPUT;
-}
-
-
-void
-BMediaConnection::BuildMediaOutput(media_output* output) const
-{
-	CALLED();
-
-	output->format = AcceptedFormat();
-	output->node = fOwner->fNode->Node();
-	output->source = fSource;
-	output->source.port = fOwner->fNode->ControlPort();
-}
-
-
-void
-BMediaConnection::BuildMediaInput(media_input* input) const
-{
-	CALLED();
-
-	input->format = AcceptedFormat();
-	input->node = fOwner->fNode->Node();
-	input->destination = fDestination;
-	input->destination.port = fOwner->fNode->ControlPort();
-}
-
-
-const media_destination&
-BMediaConnection::Destination() const
-{
-	CALLED();
-
-	return fDestination;
-}
-
-
-const media_source&
-BMediaConnection::Source() const
-{
-	CALLED();
-
-	return fSource;
+	return fConnection.IsInput();
 }
 
 
@@ -93,7 +77,7 @@ BMediaConnection::SetAcceptedFormat(const media_format& format)
 {
 	CALLED();
 
-	fFormat = format;
+	fConnection.format = format;
 }
 
 
@@ -102,7 +86,7 @@ BMediaConnection::AcceptedFormat() const
 {
 	CALLED();
 
-	return fFormat;
+	return fConnection.format;
 }
 
 
@@ -115,47 +99,15 @@ BMediaConnection::IsConnected() const
 }
 
 
-bool
-BMediaConnection::IsOutputEnabled() const
-{
-	CALLED();
-
-	return fOutputEnabled;
-}
-
-
-void*
-BMediaConnection::Cookie() const
-{
-	CALLED();
-
-	return fBufferCookie;
-}
-
-
 status_t
 BMediaConnection::Disconnect()
 {
 	CALLED();
 
-	return fOwner->DisconnectConnection(this);
-}
-
-
-status_t
-BMediaConnection::Reset()
-{
-	CALLED();
-
-	if (IsOutput())
-		fDestination = media_destination::null;
-	else
-		fSource = media_source::null;
-
 	delete fBufferGroup;
 	fBufferGroup = NULL;
 
-	return fOwner->ResetConnection(this);
+	return fOwner->ConnectionDisconnected(this);
 }
 
 
@@ -164,65 +116,7 @@ BMediaConnection::Release()
 {
 	CALLED();
 
-	return fOwner->ReleaseConnection(this);
-}
-
-
-void
-BMediaConnection::SetHooks(process_hook processHook,
-	notify_hook notifyHook, void* cookie)
-{
-	CALLED();
-
-	fProcessHook = processHook;
-	fNotifyHook = notifyHook;
-	fBufferCookie = cookie;
-}
-
-
-BMediaConnection::BMediaConnection(BMediaClient* owner,
-	media_connection_kind kind)
-	:
-	fKind(kind),
-	fOwner(owner),
-	fBind(NULL)
-{
-	CALLED();
-
-	_Init();
-}
-
-
-BMediaConnection::BMediaConnection(BMediaClient* owner,
-	const media_output& output)
-	:
-	fKind(B_MEDIA_OUTPUT),
-	fOwner(owner),
-	fBind(NULL)
-{
-	CALLED();
-
-	_Init();
-}
-
-
-BMediaConnection::BMediaConnection(BMediaClient* owner,
-	const media_input& input)
-	:
-	fKind(B_MEDIA_INPUT),
-	fOwner(owner),
-	fBind(NULL)
-{
-	CALLED();
-
-	_Init();
-}
-
-
-BMediaConnection::~BMediaConnection()
-{
-	CALLED();
-
+	return fOwner->ConnectionReleased(this);
 }
 
 
@@ -263,56 +157,52 @@ BMediaConnection::BufferDuration() const
 
 
 void
-BMediaConnection::ConnectedCallback(const media_source& source,
-	const media_format& format)
+BMediaConnection::Connected(const media_format& format)
 {
-	fSource = source;
-	SetAcceptedFormat(format);
-
-	if (fNotifyHook != NULL)
-		(*fNotifyHook)(B_CONNECTED, this);
-
 	fConnected = true;
 }
 
 
 void
-BMediaConnection::DisconnectedCallback(const media_source& source)
+BMediaConnection::Disconnected()
 {
-	fSource = media_source::null;
-
-	if (fNotifyHook != NULL)
-		(*fNotifyHook)(B_DISCONNECTED, this);
-
 	fConnected = false;
 }
 
 
 void
-BMediaConnection::ConnectCallback(const media_destination& destination)
+BMediaConnection::ConnectionRegistered(BMediaClient* owner,
+	media_connection_id id)
 {
-	fDestination = destination;
+	fOwner = owner;
+	fConnection.id = id;
+	fConnection.client = fOwner->Client();
+
+	if (IsOutput()) {
+		fConnection.source.port = fOwner->fNode->ControlPort();
+		fConnection.source.id = fConnection.id;
+
+		fConnection.destination = media_destination::null;
+	} else {
+		fConnection.destination.port = fOwner->fNode->ControlPort();
+		fConnection.destination.id = fConnection.id;
+
+		fConnection.source = media_source::null;
+	}
 }
 
 
-void
-BMediaConnection::DisconnectCallback(const media_destination& destination)
+const media_source&
+BMediaConnection::Source() const
 {
-	fDestination = destination;
+	return fConnection.Source();
 }
 
 
-void
-BMediaConnection::_Init()
+const media_destination&
+BMediaConnection::Destination() const
 {
-	CALLED();
-
-	fBufferGroup = NULL;
-	fNotifyHook = NULL;
-	fProcessHook = NULL;
-
-	fSource = media_source::null;
-	fDestination = media_destination::null;
+	return fConnection.Destination();
 }
 
 
@@ -327,3 +217,119 @@ void BMediaConnection::_ReservedMediaConnection7() {}
 void BMediaConnection::_ReservedMediaConnection8() {}
 void BMediaConnection::_ReservedMediaConnection9() {}
 void BMediaConnection::_ReservedMediaConnection10() {}
+
+
+BMediaInput::BMediaInput()
+	:
+	BMediaConnection(B_MEDIA_INPUT)
+{
+}
+
+
+media_input
+BMediaInput::MediaInput() const
+{
+	return Connection().MediaInput();
+}
+
+
+status_t
+BMediaInput::FormatChanged(const media_format& format)
+{
+	if (!format_is_compatible(format, AcceptedFormat()))
+		return B_MEDIA_BAD_FORMAT;
+
+	SetAcceptedFormat(format);
+
+	return B_OK;
+}
+
+
+void
+BMediaInput::BufferReceived(BBuffer* buffer)
+{
+	CALLED();
+
+}
+
+
+void BMediaInput::_ReservedMediaInput0() {}
+void BMediaInput::_ReservedMediaInput1() {}
+void BMediaInput::_ReservedMediaInput2() {}
+void BMediaInput::_ReservedMediaInput3() {}
+void BMediaInput::_ReservedMediaInput4() {}
+void BMediaInput::_ReservedMediaInput5() {}
+void BMediaInput::_ReservedMediaInput6() {}
+void BMediaInput::_ReservedMediaInput7() {}
+void BMediaInput::_ReservedMediaInput8() {}
+void BMediaInput::_ReservedMediaInput9() {}
+void BMediaInput::_ReservedMediaInput10() {}
+
+
+BMediaOutput::BMediaOutput()
+	:
+	BMediaConnection(B_MEDIA_OUTPUT)
+{
+}
+
+
+bool
+BMediaOutput::IsOutputEnabled() const
+{
+	CALLED();
+
+	return fOutputEnabled;
+}
+
+
+status_t
+BMediaOutput::PrepareToConnect(media_format* format)
+{
+	SetAcceptedFormat(*format);
+
+	return B_OK;
+}
+
+
+status_t
+BMediaOutput::FormatProposal(media_format* format)
+{
+	*format = AcceptedFormat();
+	return B_OK;
+}
+
+
+status_t
+BMediaOutput::FormatChangeRequested(media_format* format)
+{
+	return B_ERROR;
+}
+
+
+status_t
+BMediaOutput::SendBuffer(BBuffer* buffer)
+{
+	CALLED();
+
+	return fOwner->fNode->SendBuffer(buffer, this);
+}
+
+
+media_output
+BMediaOutput::MediaOutput() const
+{
+	return Connection().MediaOutput();
+}
+
+
+void BMediaOutput::_ReservedMediaOutput0() {}
+void BMediaOutput::_ReservedMediaOutput1() {}
+void BMediaOutput::_ReservedMediaOutput2() {}
+void BMediaOutput::_ReservedMediaOutput3() {}
+void BMediaOutput::_ReservedMediaOutput4() {}
+void BMediaOutput::_ReservedMediaOutput5() {}
+void BMediaOutput::_ReservedMediaOutput6() {}
+void BMediaOutput::_ReservedMediaOutput7() {}
+void BMediaOutput::_ReservedMediaOutput8() {}
+void BMediaOutput::_ReservedMediaOutput9() {}
+void BMediaOutput::_ReservedMediaOutput10() {}

@@ -1,6 +1,6 @@
 /*
  * Copyright 2009-2012, Ingo Weinhold, ingo_weinhold@gmx.de.
- * Copyright 2010-2015, Rene Gollent, rene@gollent.com.
+ * Copyright 2010-2016, Rene Gollent, rene@gollent.com.
  * Distributed under the terms of the MIT License.
  */
 
@@ -33,6 +33,7 @@
 #include <AutoDeleter.h>
 #include <AutoLocker.h>
 
+#include "AppMessageCodes.h"
 #include "Breakpoint.h"
 #include "BreakpointEditWindow.h"
 #include "ConsoleOutputView.h"
@@ -304,9 +305,16 @@ TeamWindow::MessageReceived(BMessage* message)
 		}
 		case MSG_DEBUG_REPORT_SAVED:
 		{
+			status_t finalStatus = message->GetInt32("status", B_OK);
 			BString data;
-			data.SetToFormat("Debug report successfully saved to '%s'",
-				message->FindString("path"));
+			if (finalStatus == B_OK) {
+				data.SetToFormat("Debug report successfully saved to '%s'",
+					message->FindString("path"));
+			} else {
+				data.SetToFormat("Failed to save debug report: '%s'",
+					strerror(finalStatus));
+			}
+
 			BAlert *alert = new(std::nothrow) BAlert("Report saved",
 				data.String(), "Close");
 			if (alert == NULL)
@@ -963,6 +971,7 @@ TeamWindow::DebugReportChanged(const Team::DebugReportEvent& event)
 {
 	BMessage message(MSG_DEBUG_REPORT_SAVED);
 	message.AddString("path", event.GetReportPath());
+	message.AddInt32("status", event.GetFinalStatus());
 	PostMessage(&message);
 }
 
@@ -1535,8 +1544,11 @@ TeamWindow::_UpdateSourcePathState()
 		if (sourceFile != NULL && !sourceFile->GetLocatedPath(sourceText))
 			sourceFile->GetPath(sourceText);
 
-		if (fActiveFunction->GetFunction()->SourceCodeState()
-			!= FUNCTION_SOURCE_NOT_LOADED
+		function_source_state state = fActiveFunction->GetFunction()
+			->SourceCodeState();
+		if (state == FUNCTION_SOURCE_SUPPRESSED)
+			sourceText.Prepend("Disassembly for: ");
+		else if (state != FUNCTION_SOURCE_NOT_LOADED
 			&& fActiveSourceCode->GetSourceFile() == NULL
 			&& sourceFile != NULL) {
 			sourceText.Prepend("Click to locate source file '");

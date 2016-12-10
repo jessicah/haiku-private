@@ -86,7 +86,7 @@ RemotePackageRepository HaikuPorts
 	cdrtools-3.02~a06-2
 	cdrtools_devel-3.02~a06-2
 	chat-20100903-3
-	clipdinger-0.5.4-1
+	clipdinger-0.5.5-1
 	clockwerk-git-3
 	cpctools-0.3.0-2
 	criticalmass-2.2-1
@@ -142,8 +142,8 @@ RemotePackageRepository HaikuPorts
 	fontconfig-2.11.1-3
 	fontconfig_devel-2.11.1-3
 	fossil-1.36-3
-	freetype-2.6.5-1
-	freetype_devel-2.6.5-1
+	freetype-2.7-1
+	freetype_devel-2.7-1
 	fribidi-0.19.6-2
 	fribidi_devel-0.19.6-2
 	friss-0.8.0-1
@@ -518,7 +518,7 @@ RemotePackageRepository HaikuPorts
 	substrate-1.0b-1
 	subversion-1.8.11-6
 	subversion_devel-1.8.11-6
-	sum_it-0.2beta-3
+	sum_it-0.2beta-5
 	super_transball-2.1.5-1
 	taglib-1.7.2-1
 	taglib_devel-1.7.2-1
@@ -537,8 +537,8 @@ RemotePackageRepository HaikuPorts
 	tiff4_devel-4.0.6-1
 	tiff4_tools-4.0.6-1
 	timetracker-0.2-1
-	tinyxml-2.6.2-1
-	tinyxml_devel-2.6.2-1
+	tinyxml-2.6.2-3
+	tinyxml_devel-2.6.2-3
 	twolame-0.3.13-1
 	twolame_devel-0.3.13-1
 	ubertuber-0.9.11-1
@@ -664,8 +664,8 @@ RemotePackageRepository HaikuPorts
 	fontconfig_x86-2.11.1-3
 	fontconfig_x86_devel-2.11.1-3
 	freedroidrpg_x86-0.15.1-1
-	freetype_x86-2.6.5-1
-	freetype_x86_devel-2.6.5-1
+	freetype_x86-2.7-1
+	freetype_x86_devel-2.7-1
 	fribidi_x86-0.19.6-2
 	fribidi_x86_devel-0.19.6-2
 	gcc_x86-5.4.0_2016_06_04-1
@@ -976,8 +976,8 @@ RemotePackageRepository HaikuPorts
 	tiff_x86_devel-3.9.6-2
 	tiff4_x86-4.0.6-1
 	tiff4_x86_devel-4.0.6-1
-	tinyxml_x86-2.6.2-1
-	tinyxml_x86_devel-2.6.2-1
+	tinyxml_x86-2.6.2-3
+	tinyxml_x86_devel-2.6.2-3
 	tig_x86-2.1-1
 	transmission_x86-2.92-2
 	twolame_x86-0.3.13-2

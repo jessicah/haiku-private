@@ -22,7 +22,10 @@
 #include <AutoDeleter.h>
 #include <AutoLocker.h>
 
+#include "AppMessageCodes.h"
 #include "CommandLineUserInterface.h"
+#include "ConnectionConfigHandlerRoster.h"
+#include "ConnectionConfigWindow.h"
 #include "DebuggerGlobals.h"
 #include "DebuggerSettingsManager.h"
 #include "DebuggerUiSettingsFactory.h"
@@ -257,6 +260,7 @@ private:
 
 private:
 			DebuggerSettingsManager fSettingsManager;
+			ConnectionConfigWindow* fConnectionWindow;
 			TeamsWindow*		fTeamsWindow;
 			StartTeamWindow*	fStartTeamWindow;
 };
@@ -289,6 +293,7 @@ Debugger::Debugger()
 	:
 	BApplication(kDebuggerSignature),
 	TargetHostInterfaceRoster::Listener(),
+	fConnectionWindow(NULL),
 	fTeamsWindow(NULL),
 	fStartTeamWindow(NULL)
 {
@@ -299,6 +304,7 @@ Debugger::~Debugger()
 {
 	DebuggerUiSettingsFactory::DeleteDefault();
 	ValueHandlerRoster::DeleteDefault();
+	ConnectionConfigHandlerRoster::DeleteDefault();
 
 	debugger_global_uninit();
 }
@@ -319,6 +325,10 @@ Debugger::Init()
 	if (error != B_OK)
 		return error;
 
+	error = ConnectionConfigHandlerRoster::CreateDefault();
+	if (error != B_OK)
+		return error;
+
 	return fSettingsManager.Init(DebuggerUiSettingsFactory::Default());
 }
 
@@ -329,19 +339,19 @@ Debugger::MessageReceived(BMessage* message)
 	switch (message->what) {
 		case MSG_SHOW_TEAMS_WINDOW:
 		{
-            if (fTeamsWindow) {
-               	fTeamsWindow->Activate(true);
-               	break;
-            }
+			if (fTeamsWindow) {
+				fTeamsWindow->Activate(true);
+				break;
+			}
 
-           	try {
+			try {
 				fTeamsWindow = TeamsWindow::Create(&fSettingsManager);
 				if (fTeamsWindow != NULL)
 					fTeamsWindow->Show();
-           	} catch (...) {
+			} catch (...) {
 				// TODO: Notify the user!
 				fprintf(stderr, "Error: Failed to create Teams window\n");
-           	}
+			}
 			break;
 		}
 		case MSG_TEAMS_WINDOW_CLOSED:
@@ -374,6 +384,28 @@ Debugger::MessageReceived(BMessage* message)
 		case MSG_START_TEAM_WINDOW_CLOSED:
 		{
 			fStartTeamWindow = NULL;
+			break;
+		}
+		case MSG_SHOW_CONNECTION_CONFIG_WINDOW:
+		{
+			if (fConnectionWindow != NULL) {
+				fConnectionWindow->Activate(true);
+				break;
+			}
+
+			try {
+				fConnectionWindow = ConnectionConfigWindow::Create();
+				if (fConnectionWindow != NULL)
+					fConnectionWindow->Show();
+			} catch (...) {
+				// TODO: Notify the user!
+				fprintf(stderr, "Error: Failed to create Teams window\n");
+			}
+			break;
+		}
+		case MSG_CONNECTION_CONFIG_WINDOW_CLOSED:
+		{
+			fConnectionWindow = NULL;
 			break;
 		}
 		case MSG_DEBUG_THIS_TEAM:

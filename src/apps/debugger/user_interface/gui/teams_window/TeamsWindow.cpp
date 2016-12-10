@@ -19,11 +19,16 @@
 #include <FindDirectory.h>
 #include <LayoutBuilder.h>
 #include <ListView.h>
+#include <Menu.h>
+#include <MenuField.h>
 #include <Path.h>
 #include <Screen.h>
 #include <ScrollView.h>
 
-#include "MessageCodes.h"
+#include <AutoDeleter.h>
+#include <AutoLocker.h>
+
+#include "AppMessageCodes.h"
 #include "SettingsManager.h"
 #include "TargetHostInterface.h"
 #include "TargetHostInterfaceRoster.h"
@@ -32,7 +37,8 @@
 
 enum {
 	MSG_TEAM_SELECTION_CHANGED = 'tesc',
-	MSG_CHOSE_CORE_FILE = 'chcf'
+	MSG_CHOSE_CORE_FILE = 'chcf',
+	MSG_SWITCH_TARGET_CONNECTION = 'stco'
 };
 
 
@@ -45,8 +51,10 @@ TeamsWindow::TeamsWindow(SettingsManager* settingsManager)
 	fAttachTeamButton(NULL),
 	fCreateTeamButton(NULL),
 	fLoadCoreButton(NULL),
+	fConnectionField(NULL),
 	fCoreSelectionPanel(NULL),
-	fSettingsManager(settingsManager)
+	fSettingsManager(settingsManager),
+	fListeners()
 {
 	team_info info;
 	get_team_info(B_CURRENT_TEAM, &info);
@@ -165,6 +173,23 @@ TeamsWindow::MessageReceived(BMessage* message)
 			break;
 		}
 
+		case MSG_SWITCH_TARGET_CONNECTION:
+		{
+			TargetHostInterface* interface;
+			if (message->FindPointer("interface", reinterpret_cast<void**>(
+					&interface)) != B_OK) {
+				break;
+			}
+
+			if (interface == fTargetHostInterface)
+				break;
+
+			fTargetHostInterface = interface;
+			_NotifySelectedInterfaceChanged(interface);
+			fLoadCoreButton->SetEnabled(fTargetHostInterface->IsLocal());
+			break;
+		}
+
 		default:
 			BWindow::MessageReceived(message);
 			break;
@@ -182,6 +207,22 @@ TeamsWindow::QuitRequested()
 }
 
 
+void
+TeamsWindow::AddListener(Listener* listener)
+{
+	AutoLocker<TeamsWindow> locker(this);
+	fListeners.Add(listener);
+}
+
+
+void
+TeamsWindow::RemoveListener(Listener* listener)
+{
+	AutoLocker<TeamsWindow> locker(this);
+	fListeners.Remove(listener);
+}
+
+
 // #pragma mark --
 
 
@@ -191,23 +232,53 @@ TeamsWindow::_Init()
 	BMessage settings;
 	_LoadSettings(settings);
 
-	fTargetHostInterface = TargetHostInterfaceRoster::Default()
-		->ActiveInterfaceAt(0);
-
 	BRect frame;
 	if (settings.FindRect("teams window frame", &frame) == B_OK) {
 		MoveTo(frame.LeftTop());
 		ResizeTo(frame.Width(), frame.Height());
 	}
 
+	BMenu* connectionMenu = new BMenu("Connection");
+	ObjectDeleter<BMenu> menuDeleter(connectionMenu);
+	connectionMenu->SetLabelFromMarked(true);
+
+	TargetHostInterfaceRoster* roster = TargetHostInterfaceRoster::Default();
+	for (int32 i = 0; i < roster->CountActiveInterfaces(); i++) {
+		TargetHostInterface* interface = roster->ActiveInterfaceAt(i);
+		BMenuItem* item = new BMenuItem(interface->GetTargetHost()->Name(),
+			new BMessage(MSG_SWITCH_TARGET_CONNECTION));
+		if (item->Message()->AddPointer("interface", interface) != B_OK) {
+			delete item;
+			throw std::bad_alloc();
+		}
+
+		if (interface->IsLocal()) {
+			item->SetMarked(true);
+			fTargetHostInterface = interface;
+		}
+
+		connectionMenu->AddItem(item);
+	}
+
+	BGroupLayout* connectionLayout = NULL;
+
 	BLayoutBuilder::Group<>(this, B_VERTICAL)
-		.Add(fTeamsListView = new TeamsListView("TeamsList", fCurrentTeam,
-			fTargetHostInterface))
+		.AddGroup(B_HORIZONTAL)
+			.SetInsets(B_USE_DEFAULT_SPACING)
+			.GetLayout(&connectionLayout)
+			.Add(fConnectionField = new BMenuField("Connected to:",
+				connectionMenu))
+			.AddGlue()
+			.Add(fCreateConnectionButton = new BButton("Create new connection"
+					B_UTF8_ELLIPSIS, new BMessage(
+						MSG_SHOW_CONNECTION_CONFIG_WINDOW)))
+		.End()
+		.Add(fTeamsListView = new TeamsListView("TeamsList"))
 		.SetInsets(1.0f, 1.0f, 1.0f, 5.0f)
 		.AddGroup(B_HORIZONTAL)
 			.SetInsets(B_USE_DEFAULT_SPACING)
 			.Add(fAttachTeamButton = new BButton("Attach", new BMessage(
-						MSG_DEBUG_THIS_TEAM)))
+					MSG_DEBUG_THIS_TEAM)))
 			.AddGlue()
 			.Add(fCreateTeamButton = new BButton("Start new team"
 					B_UTF8_ELLIPSIS, new BMessage(MSG_SHOW_START_TEAM_WINDOW)))
@@ -216,6 +287,14 @@ TeamsWindow::_Init()
 			.End()
 		.End();
 
+	connectionLayout->SetVisible(false);
+
+	menuDeleter.Detach();
+
+	AddListener(fTeamsListView);
+
+	connectionMenu->SetTargetForItems(this);
+
 	fTeamsListView->SetInvocationMessage(new BMessage(MSG_DEBUG_THIS_TEAM));
 	fTeamsListView->SetSelectionMessage(new BMessage(
 			MSG_TEAM_SELECTION_CHANGED));
@@ -223,6 +302,9 @@ TeamsWindow::_Init()
 	fAttachTeamButton->SetEnabled(false);
 	fCreateTeamButton->SetTarget(this);
 	fLoadCoreButton->SetTarget(this);
+	fCreateConnectionButton->SetTarget(be_app);
+
+	_NotifySelectedInterfaceChanged(fTargetHostInterface);
 }
 
 
@@ -270,4 +352,22 @@ TeamsWindow::_SaveSettings()
 		status = settings.Flatten(&file);
 
 	return status;
+}
+
+
+void
+TeamsWindow::_NotifySelectedInterfaceChanged(TargetHostInterface* interface)
+{
+	for (ListenerList::Iterator it = fListeners.GetIterator();
+			Listener* listener = it.Next();) {
+		listener->SelectedInterfaceChanged(interface);
+	}
+}
+
+
+// #pragma mark - TeamsWindow::Listener
+
+
+TeamsWindow::Listener::~Listener()
+{
 }

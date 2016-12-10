@@ -2,7 +2,7 @@ SubDir HAIKU_TOP src apps debugger ;
 
 UseHeaders [ FDirName $(HAIKU_TOP) headers compatibility bsd ] : true ;
 
-UsePrivateHeaders debugger ; 
+UsePrivateHeaders debugger ;
 UsePrivateHeaders [ FDirName debugger arch ] ;
 UsePrivateHeaders [ FDirName debugger controllers ] ;
 UsePrivateHeaders [ FDirName debugger debug_info ] ;
@@ -38,6 +38,9 @@ SEARCH_SOURCE += [ FDirName $(SUBDIR) settings ] ;
 SEARCH_SOURCE += [ FDirName $(SUBDIR) user_interface cli ] ;
 SEARCH_SOURCE += [ FDirName $(SUBDIR) user_interface cli commands ] ;
 SEARCH_SOURCE += [ FDirName $(SUBDIR) user_interface gui ] ;
+SEARCH_SOURCE += [ FDirName $(SUBDIR) user_interface gui connection_config ] ;
+SEARCH_SOURCE += [ FDirName $(SUBDIR) user_interface gui connection_config
+	config_handlers ] ;
 SEARCH_SOURCE += [ FDirName $(SUBDIR) user_interface gui expression_eval_window ] ;
 SEARCH_SOURCE += [ FDirName $(SUBDIR) user_interface gui inspector_window ] ;
 SEARCH_SOURCE += [ FDirName $(SUBDIR) user_interface gui model ] ;
@@ -84,6 +87,15 @@ local sources =
 
 	# user_interface/gui
 	GraphicalUserInterface.cpp
+
+	# user_interface/gui/connection_config
+	ConnectionConfigHandler.cpp
+	ConnectionConfigHandlerRoster.cpp
+	ConnectionConfigView.cpp
+
+	# user_interface/gui/connection_config/config_handlers
+	NetworkConnectionConfigHandler.cpp
+	NetworkConnectionConfigView.cpp
 
 	# user_interface/gui/model
 	VariablesViewState.cpp
@@ -132,6 +144,7 @@ local sources =
 
 	# user_interface/gui/utility_windows
 	BreakpointEditWindow.cpp
+	ConnectionConfigWindow.cpp
 	ExpressionPromptWindow.cpp
 	SignalDispositionEditWindow.cpp
 	StartTeamWindow.cpp
@@ -165,7 +178,7 @@ local sources =
 	ReportUserInterface.cpp
 ;
 
-Includes [ FGristFiles $(sources) ] : 
+Includes [ FGristFiles $(sources) ] :
 	[ BuildFeatureAttribute ncurses : headers ]
 	[ BuildFeatureAttribute libedit : headers ]
 ;

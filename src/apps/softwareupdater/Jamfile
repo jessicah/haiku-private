@@ -1,0 +1,11 @@
+SubDir HAIKU_TOP src apps softwareupdater ;
+
+UsePrivateHeaders interface shared ;
+
+Application SoftwareUpdater :
+	SoftwareUpdaterApp.cpp
+	SoftwareUpdaterWindow.cpp
+	StripeView.cpp
+	: be localestub tracker translation [ TargetLibsupc++ ]
+	: SoftwareUpdater.rdef
+;

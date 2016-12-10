@@ -35,8 +35,7 @@ Scanner::Scanner(BVolume *v, BHandler *handler)
 	fDesiredPath(),
 	fTask(),
 	fBusy(false),
-	fQuitRequested(false),
-	fPreviousSnapshot(NULL)
+	fQuitRequested(false)
 {
 	Run();
 }
@@ -144,11 +143,11 @@ Scanner::_DirectoryContains(FileInfo* currentDir, entry_ref* ref)
 void
 Scanner::_RunScan(FileInfo* startInfo)
 {
-	fPreviousSnapshot = fSnapshot;
 	fQuitRequested = false;
 	BString stringScan(B_TRANSLATE("Scanning %refName%"));
 
 	if (startInfo == NULL || startInfo == fSnapshot->rootDir) {
+		VolumeSnapshot* previousSnapshot = fSnapshot;
 		fSnapshot = new VolumeSnapshot(fVolume);
 		stringScan.ReplaceFirst("%refName%", fSnapshot->name.c_str());
 		fTask = stringScan.String();
@@ -162,7 +161,7 @@ Scanner::_RunScan(FileInfo* startInfo)
 		fSnapshot->rootDir = _GetFileInfo(&root, NULL);
 		if (fSnapshot->rootDir == NULL) {
 			delete fSnapshot;
-			fSnapshot = fPreviousSnapshot;
+			fSnapshot = previousSnapshot;
 			fBusy = false;
 			fListener.SendMessage(&fDoneMessage);
 			return;
@@ -177,7 +176,10 @@ Scanner::_RunScan(FileInfo* startInfo)
 
 		fSnapshot->currentDir = NULL;
 
+		delete previousSnapshot;
 	} else {
+		off_t previousVolumeCapacity = fSnapshot->capacity;
+		off_t previousVolumeFreeBytes = fSnapshot->freeBytes;
 		fSnapshot->capacity = fVolume->Capacity();
 		fSnapshot->freeBytes = fVolume->FreeBytes();
 		stringScan.ReplaceFirst("%refName%", startInfo->ref.name);
@@ -193,8 +195,8 @@ Scanner::_RunScan(FileInfo* startInfo)
 			vector<FileInfo *>::iterator i = parent->children.begin();
 			FileInfo* newInfo = _GetFileInfo(&startDir, parent);
 			if (newInfo == NULL) {
-				delete fSnapshot;
-				fSnapshot = fPreviousSnapshot;
+				fSnapshot->capacity = previousVolumeCapacity;
+				fSnapshot->freeBytes = previousVolumeFreeBytes;
 				fBusy = false;
 				fListener.SendMessage(&fDoneMessage);
 				return;				
@@ -206,13 +208,17 @@ Scanner::_RunScan(FileInfo* startInfo)
 			parent->children[idx] = newInfo;
 
 			// Fixup count and size fields in parent directory.
-			parent->size += newInfo->size - startInfo->size;
-			parent->count += newInfo->count - startInfo->count;
+			off_t sizeDiff = newInfo->size - startInfo->size;
+			off_t countDiff = newInfo->count - startInfo->count;
+			while (parent != NULL) {
+				parent->size += sizeDiff;
+				parent->count += countDiff;
+				parent = parent->parent;
+			}
 
 			delete startInfo;
 		}
 	}
-	delete fPreviousSnapshot;
 	fBusy = false;
 	_ChangeToDesired();
 	fListener.SendMessage(&fDoneMessage);

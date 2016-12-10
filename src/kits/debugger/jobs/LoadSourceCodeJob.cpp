@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Rene Gollent, rene@gollent.com.
+ * Copyright 2012-2016, Rene Gollent, rene@gollent.com.
  * Copyright 2009, Ingo Weinhold, ingo_weinhold@gmx.de.
  * Distributed under the terms of the MIT License.
  */
@@ -91,14 +91,15 @@ LoadSourceCodeJob::Do()
 			// explicitly asked for disassembly. This needs to be done first
 			// since Function will clear the disassembled code states of all
 			// its child instances.
+			function_source_state state
+				= fLoadForFunction ? FUNCTION_SOURCE_LOADED
+					: FUNCTION_SOURCE_SUPPRESSED;
 			if (function->SourceCodeState() == FUNCTION_SOURCE_LOADED) {
-				FileSourceCode* sourceCode = function->GetSourceCode();
-				function->SetSourceCode(sourceCode,
-					FUNCTION_SOURCE_NOT_LOADED);
+				FileSourceCode* functionSourceCode = function->GetSourceCode();
+				function->SetSourceCode(functionSourceCode, state);
 			}
 
-			fFunctionInstance->SetSourceCode(sourceCode,
-				FUNCTION_SOURCE_LOADED);
+			fFunctionInstance->SetSourceCode(sourceCode, state);
 			sourceCode->ReleaseReference();
 		}
 	} else

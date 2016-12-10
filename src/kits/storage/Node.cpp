@@ -1,10 +1,9 @@
 /*
- * Copyright 2002-2016 Haiku, Inc. All rights reserved.
+ * Copyright 2002-2011 Haiku, Inc. All rights reserved.
  * Distributed under the terms of the MIT License.
  *
  * Authors:
  *		Tyler Dauwalder
- *		John Scipione, jscipione@gmail.com
  *		Ingo Weinhold, bonefish@users.sf.net
  */
 
@@ -169,9 +168,7 @@ BNode::InitCheck() const
 status_t
 BNode::SetTo(const entry_ref* ref)
 {
-	fCStatus = _SetTo(ref, false);
-
-	return fCStatus;
+	return _SetTo(ref, false);
 }
 
 
@@ -180,20 +177,17 @@ BNode::SetTo(const BEntry* entry)
 {
 	if (entry == NULL) {
 		Unset();
-		fCStatus = B_BAD_VALUE;
-	} else
-		fCStatus = _SetTo(entry->fDirFd, entry->fName, false);
+		return (fCStatus = B_BAD_VALUE);
+	}
 
-	return fCStatus;
+	return _SetTo(entry->fDirFd, entry->fName, false);
 }
 
 
 status_t
 BNode::SetTo(const char* path)
 {
-	fCStatus = _SetTo(-1, path, false);
-
-	return fCStatus;
+	return _SetTo(-1, path, false);
 }
 
 
@@ -203,11 +197,10 @@ BNode::SetTo(const BDirectory* dir, const char* path)
 	if (dir == NULL || path == NULL
 		|| BPrivate::Storage::is_absolute_path(path)) {
 		Unset();
-		fCStatus = B_BAD_VALUE;
-	} else
-		fCStatus = _SetTo(dir->fDirFd, path, false);
+		return (fCStatus = B_BAD_VALUE);
+	}
 
-	return fCStatus;
+	return _SetTo(dir->fDirFd, path, false);
 }
 
 

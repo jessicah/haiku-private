@@ -109,8 +109,7 @@ BNode::BNode(const entry_ref* ref)
 	fAttrFd(-1),
 	fCStatus(B_NO_INIT)
 {
-	// fCStatus is set by SetTo(), ignore return value
-	(void)SetTo(ref);
+	SetTo(ref);
 }
 
 
@@ -120,8 +119,7 @@ BNode::BNode(const BEntry* entry)
 	fAttrFd(-1),
 	fCStatus(B_NO_INIT)
 {
-	// fCStatus is set by SetTo(), ignore return value
-	(void)SetTo(entry);
+	SetTo(entry);
 }
 
 
@@ -131,8 +129,7 @@ BNode::BNode(const char* path)
 	fAttrFd(-1),
 	fCStatus(B_NO_INIT)
 {
-	// fCStatus is set by SetTo(), ignore return value
-	(void)SetTo(path);
+	SetTo(path);
 }
 
 
@@ -142,8 +139,7 @@ BNode::BNode(const BDirectory* dir, const char* path)
 	fAttrFd(-1),
 	fCStatus(B_NO_INIT)
 {
-	// fCStatus is set by SetTo(), ignore return value
-	(void)SetTo(dir, path);
+	SetTo(dir, path);
 }
 
 

@@ -14,7 +14,7 @@
 #include <syslog.h>
 
 
-//#define TRACE_ACCELERANT
+#define TRACE_ACCELERANT
 #ifdef TRACE_ACCELERANT
 extern "C" void _sPrintf(const char *format, ...);
 #	define TRACE(x) _sPrintf x
@@ -81,10 +81,13 @@ static status_t
 init_common(int device, bool isClone)
 {
 	// initialize global accelerant info structure
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: init_common\n"));
 
 	gInfo = (accelerant_info *)malloc(sizeof(accelerant_info));
-	if (gInfo == NULL)
+	if (gInfo == NULL) {
+		TRACE(("Unable to allocate accelerant_info\n"));
 		return B_NO_MEMORY;
+	}
 
 	memset(gInfo, 0, sizeof(accelerant_info));
 
@@ -97,16 +100,18 @@ init_common(int device, bool isClone)
 	area_id sharedArea;
 	if (ioctl(device, VESA_GET_PRIVATE_DATA, &sharedArea, sizeof(area_id))
 			!= 0) {
+		TRACE(("\33[36mframebuffer.accelerant\33[0m: ioctl VESA_GET_PRIVATE_DATA failed\n"));
 		free(gInfo);
 		return B_ERROR;
 	}
 
 	AreaCloner sharedCloner;
-	gInfo->shared_info_area = sharedCloner.Clone("vesa shared info",
+	gInfo->shared_info_area = sharedCloner.Clone("framebuffer shared info",
 		(void **)&gInfo->shared_info, B_ANY_ADDRESS,
 		B_READ_AREA | B_WRITE_AREA, sharedArea);
 	status_t status = sharedCloner.InitCheck();
 	if (status < B_OK) {
+		TRACE(("\33[36mframebuffer.accelerant\33[0m: unable to clone framebuffer shared info\n"));
 		free(gInfo);
 		return status;
 	}
@@ -115,6 +120,7 @@ init_common(int device, bool isClone)
 		+ gInfo->shared_info->vesa_mode_offset);
 
 	sharedCloner.Keep();
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: common_init OK\n"));
 	return B_OK;
 }
 
@@ -123,6 +129,7 @@ init_common(int device, bool isClone)
 static void
 uninit_common(void)
 {
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: uninit_common\n"));
 	delete_area(gInfo->shared_info_area);
 	gInfo->shared_info_area = -1;
 	gInfo->shared_info = NULL;
@@ -141,9 +148,9 @@ uninit_common(void)
 
 /*!	Init primary accelerant */
 status_t
-vesa_init_accelerant(int device)
+framebuffer_init_accelerant(int device)
 {
-	TRACE(("vesa_init_accelerant()\n"));
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: framebuffer_init_accelerant()\n"));
 
 	status_t status = init_common(device, false);
 	if (status != B_OK)
@@ -155,31 +162,31 @@ vesa_init_accelerant(int device)
 		return status;
 	}
 
-	// Initialize current mode completely from the mode list
-	vesa_propose_display_mode(&gInfo->shared_info->current_mode, NULL, NULL);
 	return B_OK;
 }
 
 
 ssize_t
-vesa_accelerant_clone_info_size(void)
+framebuffer_accelerant_clone_info_size(void)
 {
 	// clone info is device name, so return its maximum size
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: clone_info_size\n"));
 	return B_PATH_NAME_LENGTH;
 }
 
 
 void
-vesa_get_accelerant_clone_info(void *info)
+framebuffer_get_accelerant_clone_info(void *info)
 {
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: get clone info\n"));
 	ioctl(gInfo->device, VESA_GET_DEVICE_NAME, info, B_PATH_NAME_LENGTH);
 }
 
 
 status_t
-vesa_clone_accelerant(void *info)
+framebuffer_clone_accelerant(void *info)
 {
-	TRACE(("vesa_clone_accelerant()\n"));
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: clone_accelerant()\n"));
 
 	// create full device name
 	char path[MAXPATHLEN];
@@ -187,23 +194,30 @@ vesa_clone_accelerant(void *info)
 	strcat(path, (const char *)info);
 
 	int fd = open(path, B_READ_WRITE);
-	if (fd < 0)
+	if (fd < 0) {
+		TRACE(("\33[36mframebuffer.accelerant\33[0m: failed open device\n"));
 		return errno;
+	}
 
 	status_t status = init_common(fd, true);
-	if (status != B_OK)
+	if (status != B_OK) {
+		TRACE(("\33[36mframebuffer.accelerant\33[0m: init_common not OK\n"));
 		goto err1;
+	}
 
 	// get read-only clone of supported display modes
 	status = gInfo->mode_list_area = clone_area(
-		"vesa cloned modes", (void **)&gInfo->mode_list,
+		"framebuffer cloned modes", (void **)&gInfo->mode_list,
 		B_ANY_ADDRESS, B_READ_AREA, gInfo->shared_info->mode_list_area);
-	if (status < B_OK)
+	if (status < B_OK) {
+		TRACE(("\33[36mframebuffer.accelerant\33[0m: clone area failed\n"));
 		goto err2;
+	}
 
 	return B_OK;
 
 err2:
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: uninitialising clone\n"));
 	uninit_common();
 err1:
 	close(fd);
@@ -215,9 +229,9 @@ err1:
 	its clones.
 */
 void
-vesa_uninit_accelerant(void)
+framebuffer_uninit_accelerant(void)
 {
-	TRACE(("vesa_uninit_accelerant()\n"));
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: uninit_accelerant()\n"));
 
 	// delete accelerant instance data
 	delete_area(gInfo->mode_list_area);
@@ -228,11 +242,12 @@ vesa_uninit_accelerant(void)
 
 
 status_t
-vesa_get_accelerant_device_info(accelerant_device_info *info)
+framebuffer_get_accelerant_device_info(accelerant_device_info *info)
 {
+	TRACE(("\33[36mframebuffer.accelerant\33[0m: get device_info\n"));
 	info->version = B_ACCELERANT_VERSION;
-	strcpy(info->name, "VESA Driver");
-	strcpy(info->chipset, "VESA");
+	strcpy(info->name, "Framebuffer Driver");
+	strcpy(info->chipset, "Framebuffer");
 		// ToDo: provide some more insight here...
 	strcpy(info->serial_no, "None");
 
@@ -246,7 +261,7 @@ vesa_get_accelerant_device_info(accelerant_device_info *info)
 
 
 sem_id
-vesa_accelerant_retrace_semaphore()
+framebuffer_accelerant_retrace_semaphore()
 {
 	return -1;
 }

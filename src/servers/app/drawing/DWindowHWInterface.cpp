@@ -50,9 +50,10 @@
 #include "UpdateQueue.h"
 
 
+#define DEBUG_DRIVER_MODULE
 #ifdef DEBUG_DRIVER_MODULE
 #	include <stdio.h>
-#	define STRACE(x) printf x
+#	define STRACE(x) debug_printf x
 #else
 #	define STRACE(x) ;
 #endif
@@ -421,7 +422,8 @@ DWindowHWInterface::_OpenGraphicsDevice(int deviceNumber)
 	char path[PATH_MAX];
 	while (count < deviceNumber && (entry = readdir(directory)) != NULL) {
 		if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..") ||
-			!strcmp(entry->d_name, "stub") || !strcmp(entry->d_name, "vesa"))
+			!strcmp(entry->d_name, "stub") || !strcmp(entry->d_name, "vesa") /*||
+			!strcmp(entry->d_name, "framebuffer")*/)
 			continue;
 
 		if (current_card_fd >= 0) {
@@ -435,12 +437,16 @@ DWindowHWInterface::_OpenGraphicsDevice(int deviceNumber)
 			count++;
 	}
 
-	// Open VESA driver if we were not able to get a better one
+	// Open VESA or framebuffer driver if we were not able to get a better one
 	if (count < deviceNumber) {
 		if (deviceNumber == 1) {
 			sprintf(path, "/dev/graphics/vesa");
 			current_card_fd = open(path, B_READ_WRITE);
-		} else {
+		/*}
+		if (current_card_fd < 0) {
+			sprintf(path, "/dev/graphics/framebuffer");
+			current_card_fd = open(path, B_READ_WRITE);
+		*/} else {
 			close(current_card_fd);
 			current_card_fd = B_ENTRY_NOT_FOUND;
 		}

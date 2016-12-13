@@ -34,15 +34,14 @@
 int32 api_version = B_CUR_DRIVER_API_VERSION;
 
 char* gDeviceNames[MAX_CARDS + 1];
-vesa_info* gDeviceInfo[MAX_CARDS];
-isa_module_info* gISA;
+framebuffer_info* gDeviceInfo[MAX_CARDS];
 mutex gLock;
 
 
 extern "C" const char**
 publish_devices(void)
 {
-	TRACE((DEVICE_NAME ": publish_devices()\n"));
+	TRACE((DEVICE_NAME ": publish_devices ()\n"));
 	return (const char**)gDeviceNames;
 }
 
@@ -50,12 +49,12 @@ publish_devices(void)
 extern "C" status_t
 init_hardware(void)
 {
-	TRACE((DEVICE_NAME ": init_hardware()\n"));
+	TRACE((DEVICE_NAME ": init_hardware ()\n"));
 
-	// If we don't have the VESA mode info, then we have a
-	// dumb framebuffer, in which case we bail, and leave it
-	// up to the framebuffer to handle instead
-	return (get_boot_item(VESA_MODES_BOOT_INFO, NULL) != NULL
+	// If we don't have a VESA modes list, then we are a
+	// dumb framebuffer (e.g. when no drivers on a UEFI system),
+	// otherwise the vesa driver will get used instead.
+	return (get_boot_item(VESA_MODES_BOOT_INFO, NULL) == NULL
 			&& get_boot_item(FRAME_BUFFER_BOOT_INFO, NULL) != NULL)
 		? B_OK : B_ERROR;
 }
@@ -64,43 +63,32 @@ init_hardware(void)
 extern "C" status_t
 init_driver(void)
 {
-	TRACE((DEVICE_NAME ": init_driver()\n"));
+	TRACE((DEVICE_NAME ": init_driver ()\n"));
 
-	gDeviceInfo[0] = (vesa_info*)malloc(sizeof(vesa_info));
+	gDeviceInfo[0] = (framebuffer_info*)malloc(sizeof(framebuffer_info));
 	if (gDeviceInfo[0] == NULL)
 		return B_NO_MEMORY;
 
-	memset(gDeviceInfo[0], 0, sizeof(vesa_info));
+	memset(gDeviceInfo[0], 0, sizeof(framebuffer_info));
 
-	status_t status = get_module(B_ISA_MODULE_NAME, (module_info**)&gISA);
-	if (status != B_OK)
-		goto err1;
-
-	gDeviceNames[0] = strdup("graphics/vesa");
+	gDeviceNames[0] = strdup("graphics/framebuffer");
 	if (gDeviceNames[0] == NULL) {
-		status = B_NO_MEMORY;
-		goto err2;
+		free(gDeviceInfo[0]);
+		return B_NO_MEMORY;
 	}
 
 	gDeviceNames[1] = NULL;
 
-	mutex_init(&gLock, "vesa lock");
+	mutex_init(&gLock, "framebuffer lock");
 	return B_OK;
-
-err2:
-	put_module(B_ISA_MODULE_NAME);
-err1:
-	free(gDeviceInfo[0]);
-	return status;
 }
 
 
 extern "C" void
 uninit_driver(void)
 {
-	TRACE((DEVICE_NAME ": uninit_driver()\n"));
+	TRACE((DEVICE_NAME ": uninit_driver ()\n"));
 
-	put_module(B_ISA_MODULE_NAME);
 	mutex_destroy(&gLock);
 
 	// free device related structures
@@ -117,7 +105,7 @@ find_device(const char* name)
 {
 	int index;
 
-	TRACE((DEVICE_NAME ": find_device()\n"));
+	TRACE((DEVICE_NAME ": find_device ()\n"));
 
 	for (index = 0; gDeviceNames[index] != NULL; index++) {
 		if (!strcmp(name, gDeviceNames[index])) {

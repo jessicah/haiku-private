@@ -63,7 +63,7 @@
 #endif
 
 
-//#define DEBUG_DESKTOP
+#define DEBUG_DESKTOP
 #ifdef DEBUG_DESKTOP
 #	define STRACE(a) printf a
 #else
@@ -515,9 +515,13 @@ Desktop::Init()
 		fWorkspaces[0].CurrentScreenConfiguration());
 
 	if (fVirtualScreen.HWInterface() == NULL) {
-		debug_printf("Could not initialize graphics output. Exiting.\n");
+		debugger("Could not initialize graphics output. Exiting.\n");
 		return B_ERROR;
 	}
+
+	debug_printf("\33[36mDimensions of the desktop: %" B_PRId32 "x%" B_PRId32 "\33[0m\n",
+		(int32)fVirtualScreen.Frame().Width(),
+		(int32)fVirtualScreen.Frame().Height());
 
 	fVirtualScreen.HWInterface()->MoveCursorTo(
 		fVirtualScreen.Frame().Width() / 2,

@@ -343,11 +343,14 @@ ModeList::CreateColorSpaces(const color_space* spaces, uint32 count)
 
 	memcpy(baseModes, fModes, baseModesSize);
 
-	for (uint32 i = 0; i < count; i++) {
+	for (uint32 i = 0; i <= count; i++) {
 		if (i > 0 && !AddModes(baseModes, baseModeCount)) {
 			free(baseModes);
 			return false;
 		}
+
+		if (i == count)
+			break;
 
 		for (uint32 j = 0; j < baseModeCount; j++) {
 			fModes[j + fCount - baseModeCount].space = spaces[i];

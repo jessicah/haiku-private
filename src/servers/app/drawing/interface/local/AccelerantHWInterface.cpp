@@ -52,9 +52,11 @@
 using std::nothrow;
 
 
+#define DEBUG_DRIVER_MODULE
 #ifdef DEBUG_DRIVER_MODULE
 #	include <stdio.h>
-#	define ATRACE(x) printf x
+extern "C" void _sPrintf(const char *format, ...);
+#	define ATRACE(x) _sPrintf x
 #else
 #	define ATRACE(x) ;
 #endif
@@ -160,6 +162,7 @@ AccelerantHWInterface::AccelerantHWInterface()
 	fBlitParams(new (nothrow) blit_params[kDefaultParamsCount]),
 	fBlitParamsCount(kDefaultParamsCount)
 {
+	ATRACE(("\33[36mAccelerantHWInterface()\33[0m\n"));
 	fDisplayMode.virtual_width = 640;
 	fDisplayMode.virtual_height = 480;
 	fDisplayMode.space = B_RGB32;
@@ -173,6 +176,7 @@ AccelerantHWInterface::AccelerantHWInterface()
 
 AccelerantHWInterface::~AccelerantHWInterface()
 {
+	ATRACE(("\33[36m~AccelerantHWInterface()\33[0m\n"));
 	delete fBackBuffer;
 	delete fFrontBuffer;
 
@@ -190,24 +194,38 @@ AccelerantHWInterface::~AccelerantHWInterface()
 status_t
 AccelerantHWInterface::Initialize()
 {
+	ATRACE(("\33[36mAccelerantHWInterface::Initialize()\33[0m\n"));
 	status_t ret = HWInterface::Initialize();
 
-	if (!fRectParams || !fBlitParams)
+	if (!fRectParams || !fBlitParams) {
+		ATRACE(("\33[36m    missing rect/blit params\33[0m\n"));
 		return B_NO_MEMORY;
+	}
 
 	if (ret >= B_OK) {
 		for (int32 i = 1; fCardFD != B_ENTRY_NOT_FOUND; i++) {
 			fCardFD = _OpenGraphicsDevice(i);
 			if (fCardFD < 0) {
-				ATRACE(("Failed to open graphics device\n"));
+				ATRACE(("\33[36m    Failed to open graphics device\n"));
 				continue;
+			} else {
+				ATRACE(("\33[36m    Opened graphics device %" B_PRId32 "\n", i));
 			}
 
-			if (_OpenAccelerant(fCardFD) == B_OK)
+			if (_OpenAccelerant(fCardFD) == B_OK) {
+				ATRACE(("\33[36m    Opened accelerant\n"));
 				break;
+			}
 
+			ATRACE(("\33[36m    Failed to open accelerant\n"));
 			close(fCardFD);
 			// _OpenAccelerant() failed, try to open next graphics card
+		}
+
+		if (fCardFD >= 0) {
+			ATRACE(("\33[36m    got a graphics device\33[0m\n"));
+		} else {
+			ATRACE(("\33[36m    failed to get a graphics device\33[0m\n"));
 		}
 
 		return fCardFD >= 0 ? B_OK : fCardFD;
@@ -233,6 +251,7 @@ AccelerantHWInterface::Initialize()
 int
 AccelerantHWInterface::_OpenGraphicsDevice(int deviceNumber)
 {
+	ATRACE(("\33[36mAccelerantHWInterface::_OpenGraphicsDevice()\33[0m\n"));
 	DIR *directory = opendir("/dev/graphics");
 	if (!directory)
 		return -1;
@@ -247,7 +266,8 @@ AccelerantHWInterface::_OpenGraphicsDevice(int deviceNumber)
 		char path[PATH_MAX];
 		while (count < deviceNumber && (entry = readdir(directory)) != NULL) {
 			if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")
-				|| !strcmp(entry->d_name, "vesa"))
+				|| !strcmp(entry->d_name, "vesa")
+				/*|| !strcmp(entry->d_name, "framebuffer")*/)
 				continue;
 
 			if (device >= 0) {
@@ -268,7 +288,10 @@ AccelerantHWInterface::_OpenGraphicsDevice(int deviceNumber)
 			device = open("/dev/graphics/vesa", B_READ_WRITE);
 			fVGADevice = device;
 				// store the device, so that we can access the planar blitter
-		} else {
+		/*}
+		if (device < 0) {
+			device = open("/dev/graphics/framebuffer", B_READ_WRITE);
+		*/} else {
 			close(device);
 			device = B_ENTRY_NOT_FOUND;
 		}
@@ -283,35 +306,41 @@ AccelerantHWInterface::_OpenGraphicsDevice(int deviceNumber)
 status_t
 AccelerantHWInterface::_OpenAccelerant(int device)
 {
+	ATRACE(("\33[36mAccelerantHWInterface::_OpenAccelerant()\33[0m\n"));
 	char signature[1024];
 	if (ioctl(device, B_GET_ACCELERANT_SIGNATURE,
 			&signature, sizeof(signature)) != B_OK) {
+		ATRACE(("\33[36m    ioctl(B_GET_ACCELERANT_SIGNATURE) failed\33[0m\n"));
 		return B_ERROR;
 	}
 
-	ATRACE(("accelerant signature is: %s\n", signature));
+	ATRACE(("\33[32m    accelerant signature is: %s\33[0m\n", signature));
 
 	fAccelerantImage = -1;
 
 	BString leafPath("/accelerants/");
 	leafPath << signature;
+	ATRACE(("\33[36m    searching for leaf path: \33[32m%s\33[0m\n",
+		leafPath.String()));
 	BStringList addOnPaths;
 	BPathFinder::FindPaths(B_FIND_PATH_ADD_ONS_DIRECTORY, leafPath.String(),
 		addOnPaths);
 	int32 count = addOnPaths.CountStrings();
+	ATRACE(("\33[36m   found %" B_PRId32 " paths\33[0m\n"));
 	for (int32 i = 0; i < count; i++) {
 		const char* path = addOnPaths.StringAt(i).String();
 		struct stat accelerantStat;
 		if (stat(path, &accelerantStat) != 0)
 			continue;
 
-		ATRACE(("accelerant path is: %s\n", path));
+		ATRACE(("\33[36m    accelerant path is: \33[32m%s\33[0m\n", path));
 
 		fAccelerantImage = load_add_on(path);
 		if (fAccelerantImage >= 0) {
+			ATRACE(("\33[36m    load_add_on succeeded...\33[0m\n"));
 			if (get_image_symbol(fAccelerantImage, B_ACCELERANT_ENTRY_POINT,
 					B_SYMBOL_TYPE_ANY, (void**)(&fAccelerantHook)) != B_OK) {
-				ATRACE(("unable to get B_ACCELERANT_ENTRY_POINT\n"));
+				ATRACE(("\33[36m    unable to get B_ACCELERANT_ENTRY_POINT\33[0m\n"));
 				unload_add_on(fAccelerantImage);
 				fAccelerantImage = -1;
 				return B_ERROR;
@@ -321,7 +350,7 @@ AccelerantHWInterface::_OpenAccelerant(int device)
 			initAccelerant = (init_accelerant)fAccelerantHook(
 				B_INIT_ACCELERANT, NULL);
 			if (!initAccelerant || initAccelerant(device) != B_OK) {
-				ATRACE(("InitAccelerant unsuccessful\n"));
+				ATRACE(("\33[36m    InitAccelerant unsuccessful\33[0m\n"));
 				unload_add_on(fAccelerantImage);
 				fAccelerantImage = -1;
 				return B_ERROR;
@@ -331,11 +360,31 @@ AccelerantHWInterface::_OpenAccelerant(int device)
 		}
 	}
 
-	if (fAccelerantImage < B_OK)
+	if (fAccelerantImage < B_OK) {
+		ATRACE(("\33[36m    load_add_on failed\33[0m\n"));
 		return B_ERROR;
+	}
 
 	if (_SetupDefaultHooks() != B_OK) {
-		syslog(LOG_ERR, "Accelerant %s does not export the required hooks.\n",
+		ATRACE(("\33[36m    Accelerant does not export the required hooks\33[0m\n"));
+		if (!fAccAcquireEngine)
+			ATRACE(("\33[36m    Missing accelerant hook \33[32macquire engine\33[0m\n"));
+		if (!fAccReleaseEngine)
+			ATRACE(("\33[36m    Missing accelerant hook \33[32mrelease engine\33[0m\n"));
+		if (!fAccGetFrameBufferConfig)
+			ATRACE(("\33[36m    Missing accelerant hook \33[32mget frame buffer config\33[0m\n"));
+		if(!fAccGetModeCount)
+			ATRACE(("\33[36m    Missing accelerant hook \33[32mget mode count\33[0m\n"));
+		if (!fAccGetModeList)
+			ATRACE(("\33[36m    Missing accelerant hook \33[32mget mode list\33[0m\n"));
+		if (!fAccSetDisplayMode)
+			ATRACE(("\33[36m    Missing accelerant hook \33[32mset display mode\33[0m\n"));
+		if (!fAccGetDisplayMode)
+			ATRACE(("\33[36m    Missing accelerant hook \33[32mget display mode\33[0m\n"));
+		if (!fAccGetPixelClockLimits)
+			ATRACE(("\33[36m    Missing accelerant hook \33[32mget pixel clock limits\33[0m\n"));
+
+		syslog(LOG_ERR, "    Accelerant %s does not export the required hooks.\n",
 			signature);
 
 		uninit_accelerant uninitAccelerant = (uninit_accelerant)
@@ -354,6 +403,7 @@ AccelerantHWInterface::_OpenAccelerant(int device)
 status_t
 AccelerantHWInterface::_SetupDefaultHooks()
 {
+	ATRACE(("\33[36mAccelerantHWInterface::_SetupDefaultHooks\33[0m\n"));
 	// required
 	fAccAcquireEngine = (acquire_engine)fAccelerantHook(B_ACQUIRE_ENGINE, NULL);
 	fAccReleaseEngine = (release_engine)fAccelerantHook(B_RELEASE_ENGINE, NULL);

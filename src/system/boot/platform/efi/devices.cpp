@@ -29,40 +29,55 @@ static struct list sMediaDevices;
 static UINTN
 device_path_length(EFI_DEVICE_PATH* path)
 {
-	//dprintf("calculating device path length...\n");
 	EFI_DEVICE_PATH *node = path;
 	UINTN length = 0;
 	while (!IsDevicePathEnd(node)) {
 		length += DevicePathNodeLength(node);
 		node = NextDevicePathNode(node);
-		//dprintf("new length: %lu\n", length);
 	}
 
-	// Also need to include the length of the device path end
-	// node, otherwise we won't be able to find the end of the
-	// device path when we copy it
+	// node now points to the device path end node; add its length as well
 	return length + DevicePathNodeLength(node);
+}
+
+
+// If matchSubPath is true, then the second device path can be a sub-path
+// of the first device path
+static bool
+compare_device_paths(EFI_DEVICE_PATH* first, EFI_DEVICE_PATH* second, bool matchSubPath = false)
+{
+	EFI_DEVICE_PATH *firstNode = first;
+	EFI_DEVICE_PATH *secondNode = second;
+	while (!IsDevicePathEnd(firstNode) && !IsDevicePathEnd(secondNode)) {
+		UINTN firstLength = DevicePathNodeLength(firstNode);
+		UINTN secondLength = DevicePathNodeLength(secondNode);
+		if (firstLength != secondLength || memcmp(firstNode, secondNode, firstLength) != 0) {
+			return false;
+		}
+		firstNode = NextDevicePathNode(firstNode);
+		secondNode = NextDevicePathNode(secondNode);
+	}
+
+	if (matchSubPath)
+		return IsDevicePathEnd(secondNode);
+
+	return IsDevicePathEnd(firstNode) && IsDevicePathEnd(secondNode);
 }
 
 
 static bool
 add_device_path(struct list *list, EFI_DEVICE_PATH* path, EFI_HANDLE handle)
 {
-	UINTN length = device_path_length(path);
-	dprintf("  length of path to add: %lu\n", length);
-
 	device_handle *node = NULL;
 	while ((node = (device_handle*)list_get_next_item(list, node)) != NULL) {
-		length = min_c(length, device_path_length(node->device_path));
-		dprintf("  length of path comparing to: %lu\n",
-			device_path_length(node->device_path));
-		if (memcmp(node->device_path, path, length) == 0) {
+		if (compare_device_paths(node->device_path, path)) {
 			dprintf("    device path already exists\n");
 			return false;
 		}
 	}
 
-	dprintf("    adding a new device path\n");
+	dprintf("    adding a new device path!\n");
+	UINTN length = device_path_length(path);
 	node = (device_handle*)malloc(sizeof(struct device_handle));
 	node->device_path = (EFI_DEVICE_PATH*)malloc(length);
 	node->handle = handle;
@@ -87,6 +102,18 @@ class EfiDevice : public Node
 		virtual off_t Size() const { return fSize; }
 
 		uint32 BlockSize() const { return fBlockSize; }
+		bool ReadOnly() const { return fBlockIo->Media->ReadOnly; }
+		int32 BootMethod() const {
+			if (fDevicePath->Type == MEDIA_DEVICE_PATH) {
+				if (fDevicePath->SubType == MEDIA_CDROM_DP)
+					return BOOT_METHOD_CD;
+				if (fDevicePath->SubType == MEDIA_HARDDRIVE_DP)
+					return BOOT_METHOD_HARD_DISK;
+			}
+
+			return BOOT_METHOD_DEFAULT;
+		}
+		EFI_DEVICE_PATH* DevicePath() { return fDevicePath; }
 	private:
 		EFI_BLOCK_IO*		fBlockIo;
 		EFI_DEVICE_PATH*	fDevicePath;
@@ -163,7 +190,7 @@ build_device_handles()
 	status = kBootServices->LocateHandle(ByProtocol, &blockIoGuid, 0, &size, 0);
 	if (status != EFI_BUFFER_TOO_SMALL)
 		return B_ENTRY_NOT_FOUND;
-	
+
 	handles = (EFI_HANDLE*)malloc(size);
 	status = kBootServices->LocateHandle(ByProtocol, &blockIoGuid, 0, &size,
 		handles);
@@ -178,11 +205,11 @@ build_device_handles()
 			(void**)&devicePath);
 		if (status != EFI_SUCCESS)
 			continue;
-		
+
 		node = devicePath;
 		while (!IsDevicePathEnd(NextDevicePathNode(node)))
 			node = NextDevicePathNode(node);
-		
+
 		if (DevicePathType(node) == MEDIA_DEVICE_PATH) {
 			// Add to our media devices list
 			dprintf("    adding a media device path instance\n");
@@ -284,16 +311,10 @@ get_messaging_device_for_media_device(device_handle *media_device)
 {
 	device_handle *messaging_device = NULL;
 	while ((messaging_device = (device_handle*)list_get_next_item(&sMessagingDevices, messaging_device)) != NULL) {
-		EFI_DEVICE_PATH *messaging_path = messaging_device->device_path;
-		EFI_DEVICE_PATH *media_path = media_device->device_path;
-		UINTN messaging_length = device_path_length(messaging_path);
-		UINTN media_length = device_path_length(media_path);
-		// Need to subtract the length of the end node (4 bytes)
-		if (messaging_length < media_length && messaging_length > 4) {
-			if (memcmp(messaging_path, media_path, messaging_length - 4) == 0) {
-				dprintf("found messaging device for media device\n");
-				return messaging_device;
-			}
+		if (compare_device_paths(media_device->device_path,
+				messaging_device->device_path, true)) {
+			dprintf("found messaging device for media device\n");
+			return messaging_device;
 		}
 	}
 
@@ -312,7 +333,7 @@ add_cd_devices(NodeList *devicesList)
 
 		if (DevicePathType(node) != MEDIA_DEVICE_PATH)
 			continue;
-		
+
 		if (DevicePathSubType(node) != MEDIA_CDROM_DP)
 			continue;
 
@@ -326,15 +347,23 @@ add_cd_devices(NodeList *devicesList)
 		EFI_GUID blockIoGuid = BLOCK_IO_PROTOCOL;
 		EFI_STATUS status = kBootServices->HandleProtocol(messaging_device->handle,
 			&blockIoGuid, (void**)&blockIo);
-		if (status != EFI_SUCCESS || !blockIo->Media->MediaPresent) {
+		if (status != EFI_SUCCESS) {
 			dprintf("unable to get block IO for device path\n");
 			continue;
+		}
+		if (!blockIo->Media->MediaPresent) {
+			dprintf("media not present for device path\n");
+			continue;
+		}
+
+		if (blockIo->Media->ReadOnly) {
+			dprintf("note: media is readonly\n");
 		}
 
 		EfiDevice *device = new(std::nothrow)EfiDevice(blockIo, handle->device_path);
 		if (device == NULL)
 			continue;
-		
+
 		dprintf("adding a CD device\n");
 		devicesList->Insert(device);
 	}
@@ -346,7 +375,44 @@ add_cd_devices(NodeList *devicesList)
 static status_t
 add_remaining_devices(NodeList *devicesList)
 {
-	return B_UNSUPPORTED;
+	device_handle *node = NULL;
+	while ((node = (device_handle*)list_get_next_item(&sMessagingDevices, node)) != NULL) {
+		NodeIterator it = devicesList->GetIterator();
+		bool found = false;
+		while (it.HasNext()) {
+			EfiDevice *device = (EfiDevice*)it.Next();
+			// device->DevicePath() is a Media Device Path instance
+			if (compare_device_paths(device->DevicePath(), node->device_path, true)) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			EFI_BLOCK_IO *blockIo;
+			EFI_GUID blockIoGuid = BLOCK_IO_PROTOCOL;
+			EFI_STATUS status = kBootServices->HandleProtocol(node->handle,
+				&blockIoGuid, (void**)&blockIo);
+			if (status != EFI_SUCCESS) {
+				dprintf("unable to get block IO for device path\n");
+				continue;
+			}
+			if (!blockIo->Media->MediaPresent) {
+				dprintf("media not present for device path\n");
+				continue;
+			}
+
+			EfiDevice *device = new(std::nothrow)EfiDevice(blockIo, node->device_path);
+			if (device == NULL)
+				continue;
+
+			devicesList->Insert(device);
+			dprintf("added a new messaging device to devices list\n");
+		} else {
+			dprintf("skipping existing messaging device path\n");
+		}
+	}
+
+	return B_OK;
 }
 
 
@@ -368,6 +434,8 @@ platform_add_boot_device(struct stage2_args *args, NodeList *devicesList)
 
 	build_device_handles();
 	dprintf("built device handle lists\n");
+	build_device_handles();
+	dprintf("run a second time, nothing should be added\n");
 
 	if (get_boot_uuid()) {
 		// If we have the UUID, add the boot device containing that partition

@@ -25,7 +25,11 @@ struct device_handle {
 static struct list sMessagingDevices;
 static struct list sMediaDevices;
 
+static EFI_GUID BlockIoGUID = BLOCK_IO_PROTOCOL;
+static EFI_GUID LoadedImageGUID = LOADED_IMAGE_PROTOCOL;
+static EFI_GUID DevicePathGUID = DEVICE_PATH_PROTOCOL;
 
+#if 0
 static UINTN
 device_path_length(EFI_DEVICE_PATH* path)
 {
@@ -39,8 +43,9 @@ device_path_length(EFI_DEVICE_PATH* path)
 	// node now points to the device path end node; add its length as well
 	return length + DevicePathNodeLength(node);
 }
+#endif
 
-
+#if 0
 // If matchSubPath is true, then the second device path can be a sub-path
 // of the first device path
 static bool
@@ -63,8 +68,9 @@ compare_device_paths(EFI_DEVICE_PATH* first, EFI_DEVICE_PATH* second, bool match
 
 	return IsDevicePathEnd(firstNode) && IsDevicePathEnd(secondNode);
 }
+#endif
 
-
+#if 0
 static bool
 add_device_path(struct list *list, EFI_DEVICE_PATH* path, EFI_HANDLE handle)
 {
@@ -87,7 +93,7 @@ add_device_path(struct list *list, EFI_DEVICE_PATH* path, EFI_HANDLE handle)
 
 	return true;
 }
-
+#endif
 
 class EfiDevice : public Node
 {
@@ -99,9 +105,10 @@ class EfiDevice : public Node
 			size_t bufferSize);
 		virtual ssize_t WriteAt(void *cookie, off_t pos, const void *buffer,
 			size_t bufferSize) { return B_UNSUPPORTED; }
-		virtual off_t Size() const { return fSize; }
+		virtual off_t Size() const {
+			return (fBlockIo->Media->LastBlock + 1) * BlockSize(); }
 
-		uint32 BlockSize() const { return fBlockSize; }
+		uint32 BlockSize() const { return fBlockIo->Media->BlockSize; }
 		bool ReadOnly() const { return fBlockIo->Media->ReadOnly; }
 		int32 BootMethod() const {
 			if (fDevicePath->Type == MEDIA_DEVICE_PATH) {
@@ -117,9 +124,6 @@ class EfiDevice : public Node
 	private:
 		EFI_BLOCK_IO*		fBlockIo;
 		EFI_DEVICE_PATH*	fDevicePath;
-
-		uint32				fBlockSize;
-		uint64				fSize;
 };
 
 
@@ -128,8 +132,6 @@ EfiDevice::EfiDevice(EFI_BLOCK_IO *blockIo, EFI_DEVICE_PATH *devicePath)
 	fBlockIo(blockIo),
 	fDevicePath(devicePath)
 {
-	fBlockSize = fBlockIo->Media->BlockSize;
-	fSize = (fBlockIo->Media->LastBlock + 1) * fBlockSize;
 }
 
 
@@ -141,16 +143,14 @@ EfiDevice::~EfiDevice()
 ssize_t
 EfiDevice::ReadAt(void *cookie, off_t pos, void *buffer, size_t bufferSize)
 {
-	uint32 offset = pos % fBlockSize;
-	pos /= fBlockSize;
+	uint32 offset = pos % BlockSize();
+	pos /= BlockSize();
 
-	uint32 numBlocks = (offset + bufferSize + fBlockSize) / fBlockSize;
-	char readBuffer[numBlocks * fBlockSize];
+	uint32 numBlocks = (offset + bufferSize + BlockSize()) / BlockSize();
+	char readBuffer[numBlocks * BlockSize()];
 
-	EFI_STATUS status = fBlockIo->ReadBlocks(fBlockIo, fBlockIo->Media->MediaId,
-		pos, sizeof(readBuffer), readBuffer);
-
-	if (status != EFI_SUCCESS)
+	if (fBlockIo->ReadBlocks(fBlockIo, fBlockIo->Media->MediaId,
+		pos, sizeof(readBuffer), readBuffer) != EFI_SUCCESS)
 		return B_ERROR;
 
 	memcpy(buffer, readBuffer + offset, bufferSize);
@@ -175,6 +175,7 @@ find_device_path(EFI_DEVICE_PATH *devicePath, uint16 type, uint16 subType)
 }
 #endif
 
+#if 0
 static status_t
 build_device_handles()
 {
@@ -225,6 +226,7 @@ build_device_handles()
 
 	return B_OK;
 }
+#endif
 
 #if 0
 		node = devicePath;
@@ -273,8 +275,7 @@ get_next_check_sum_offset(int32 index, off_t maxSize)
 	if (index < 4)
 		return (maxSize >> 10) + index * 2048;
 
-	//return ((system_time() + index) % (maxSize >> 9)) * 512;
-	return 42 * 512;
+	return ((system_time() + index) % (maxSize >> 9)) * 512;
 }
 
 
@@ -298,14 +299,15 @@ compute_check_sum(Node *device, off_t offset)
 	return sum;
 }
 
-
+#if 0
 static status_t
 add_boot_device(NodeList *devicesList)
 {
 	return B_ENTRY_NOT_FOUND;
 }
+#endif
 
-
+#if 0
 static device_handle*
 get_messaging_device_for_media_device(device_handle *media_device)
 {
@@ -320,8 +322,9 @@ get_messaging_device_for_media_device(device_handle *media_device)
 
 	return NULL;
 }
+#endif
 
-
+#if 0
 static status_t
 add_cd_devices(NodeList *devicesList)
 {
@@ -370,8 +373,9 @@ add_cd_devices(NodeList *devicesList)
 
 	return devicesList->Count() > 0 ? B_OK : B_ENTRY_NOT_FOUND;
 }
+#endif
 
-
+#if 0
 static status_t
 add_remaining_devices(NodeList *devicesList)
 {
@@ -414,18 +418,20 @@ add_remaining_devices(NodeList *devicesList)
 
 	return B_OK;
 }
+#endif
 
-
+#if 0
 static bool
 get_boot_uuid(void)
 {
 	return false;
 }
-
+#endif
 
 status_t
 platform_add_boot_device(struct stage2_args *args, NodeList *devicesList)
 {
+#if 0
 	dprintf("platform_add_boot_device()\n");
 	// This is the first entry point, so init the lists here
 	list_init(&sMessagingDevices);
@@ -449,15 +455,93 @@ platform_add_boot_device(struct stage2_args *args, NodeList *devicesList)
 	// Otherwise, we don't know what the boot device is; defer to
 	// platform_add_block_devices() to add the rest
 	return B_ENTRY_NOT_FOUND;
+#else
+	EFI_LOADED_IMAGE *loadedImage;
+	if  (kBootServices->HandleProtocol(kImage, &LoadedImageGUID,
+			(void**)&loadedImage) != EFI_SUCCESS)
+		return B_ERROR;
+
+	EFI_DEVICE_PATH *devicePath, *node;
+	if (kBootServices->HandleProtocol(loadedImage->DeviceHandle,
+			&DevicePathGUID, (void **)&devicePath) != EFI_SUCCESS)
+		panic("Failed to lookup boot device path!");
+
+	for (node = devicePath;DevicePathType(node) != MESSAGING_DEVICE_PATH;
+			node = NextDevicePathNode(node)) {
+		if (IsDevicePathEnd(node))
+			panic("Could not find disk of EFI partition!");
+	}
+
+	SetDevicePathEndNode(NextDevicePathNode(node));
+
+	EFI_HANDLE handle;
+	if (kBootServices->LocateDevicePath(&BlockIoGUID, &devicePath, &handle)
+			!= EFI_SUCCESS)
+		panic("Cannot get boot device handle!");
+
+	EFI_BLOCK_IO *blockIo;
+	if (kBootServices->HandleProtocol(handle, &BlockIoGUID, (void**)&blockIo)
+			!= EFI_SUCCESS)
+		panic("Cannot get boot block io protocol!");
+
+	if (!blockIo->Media->MediaPresent)
+		panic("Boot disk has no media present!");
+
+
+	EfiDevice *device = new(std::nothrow)EfiDevice(blockIo, devicePath);
+	if (device == NULL)
+		panic("Can't allocate memory for boot device!");
+
+	devicesList->Insert(device);
+	return B_OK;
+#endif
 }
 
 
 status_t
 platform_add_block_devices(struct stage2_args *args, NodeList *devicesList)
 {
+#if 0
 	// Add all other devices not yet added
 	dprintf("platform_add_block_devices()\n");
 	return add_remaining_devices(devicesList);
+#else
+	EFI_BLOCK_IO *blockIo;
+	UINTN memSize = 0;
+
+	// Read to zero sized buffer to get memory needed for handles
+	if (kBootServices->LocateHandle(ByProtocol, &BlockIoGUID, 0, &memSize, 0)
+			!= EFI_BUFFER_TOO_SMALL)
+		panic("Cannot read size of block device handles!");
+
+	uint32 noOfHandles = memSize / sizeof(EFI_HANDLE);
+
+	EFI_HANDLE handles[noOfHandles];
+	if (kBootServices->LocateHandle(ByProtocol, &BlockIoGUID, 0, &memSize,
+			handles) != EFI_SUCCESS)
+		panic("Failed to locate block devices!");
+
+	for (uint32 n = 0; n < noOfHandles; n++) {
+		if (kBootServices->HandleProtocol(handles[n], &BlockIoGUID,
+				(void**)&blockIo) != EFI_SUCCESS)
+			panic("Cannot get block device handle!");
+
+		// Skip partition block devices, Haiku does partition scan
+		if (!blockIo->Media->MediaPresent || blockIo->Media->LogicalPartition)
+			continue;
+
+		EFI_DEVICE_PATH *devicePath;
+		// Atm devicePath isn't necessary so result isn't checked
+		kBootServices->HandleProtocol(handles[n], &DevicePathGUID,
+			(void**)&devicePath);
+
+		EfiDevice *device = new(std::nothrow)EfiDevice(blockIo, devicePath);
+		if (device == NULL)
+			panic("Can't allocate memory for block devices!");
+		devicesList->Insert(device);
+	}
+	return devicesList->Count() > 0 ? B_OK : B_ENTRY_NOT_FOUND;
+#endif
 }
 
 
@@ -466,15 +550,14 @@ platform_get_boot_partition(struct stage2_args *args, Node *bootDevice,
 		NodeList *partitions, boot::Partition **_partition)
 {
 	dprintf("platform_get_boot_partition()\n");
-	NodeIterator it = partitions->GetIterator();
-	while (it.HasNext()) {
-		boot::Partition *partition = (boot::Partition*)it.Next();
-		// we're only looking for CDs atm, so just return first found
+	NodeIterator iterator = partitions->GetIterator();
+	boot::Partition *partition = NULL;
+	while ((partition = (boot::Partition *)iterator.Next()) != NULL) {
+		//Currently we pick first partition. If not found menu lets user select.
 		*_partition = partition;
 		return B_OK;
 	}
-
-	return B_ERROR;
+	return B_ENTRY_NOT_FOUND;
 }
 
 
@@ -482,8 +565,10 @@ status_t
 platform_register_boot_device(Node *device)
 {
 	dprintf("platform_register_boot_device()\n");
+	EfiDevice *efiDevice = (EfiDevice *)device;
 	disk_identifier identifier;
 
+	// TODO: Setup using device path
 	identifier.bus_type = UNKNOWN_BUS;
 	identifier.device_type = UNKNOWN_DEVICE;
 	identifier.device.unknown.size = device->Size();
@@ -494,8 +579,8 @@ platform_register_boot_device(Node *device)
 		identifier.device.unknown.check_sums[i].sum = compute_check_sum(device, offset);
 	}
 
-	gBootVolume.SetInt32(BOOT_METHOD, BOOT_METHOD_CD);
-	gBootVolume.SetBool(BOOT_VOLUME_BOOTED_FROM_IMAGE, true);
+	gBootVolume.SetInt32(BOOT_METHOD, efiDevice->BootMethod());
+	gBootVolume.SetBool(BOOT_VOLUME_BOOTED_FROM_IMAGE, efiDevice->ReadOnly());
 	gBootVolume.SetData(BOOT_VOLUME_DISK_IDENTIFIER, B_RAW_TYPE,
 		&identifier, sizeof(disk_identifier));
 

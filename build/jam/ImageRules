@@ -1492,12 +1492,12 @@ rule BuildFloppyBootImage image : haikuLoader : archive
 	FLOPPY_IMAGE_SIZE on $(image) = $(HAIKU_BOOT_FLOPPY_IMAGE_SIZE) ;
 	ARCHIVE_IMAGE_OFFSET on $(image) = $(HAIKU_BOOT_ARCHIVE_IMAGE_OFFSET) ;
 	BuildFloppyBootImage1 $(image) : $(haikuLoader) $(archive) ;
-	if $(HAIKU_BOOT_PLATFORM) = atari_m68k {
+	if $(HAIKU_KERNEL_PLATFORM) = atari_m68k {
 		Depends $(image) : <build>fixup_tos_boot_checksum ;
 		BuildFloppyBootImageFixupM68K $(image)
 			: <build>fixup_tos_boot_checksum ;
 	}
-	if $(HAIKU_BOOT_PLATFORM) = amiga_m68k {
+	if $(HAIKU_KERNEL_PLATFORM) = amiga_m68k {
 		Depends $(image) : <build>fixup_amiga_boot_checksum ;
 		BuildFloppyBootImageFixupM68K $(image)
 			: <build>fixup_amiga_boot_checksum ;

@@ -1639,4 +1639,21 @@ actions BuildCDBootPPCImage1 bind MAPS
 	$(RM) -r $(HAIKU_OUTPUT_DIR)/cd
 }
 
+#pragma mark - EFI System Partition rules
 
+rule BuildEfiSystemPartition image : efiLoader
+{
+	Depends $(image) : $(efiLoader) ;
+
+	BuildEfiSystemPartition1 $(image) : $(efiLoader) ;
+}
+
+actions BuildEfiSystemPartition1
+{
+	$(RM) $(<)
+	dd if=/dev/zero of=$(<) bs=1048576 count=32
+	mkfs.msdos $(<)
+	mmd -D s -i $(<) ::/EFI
+	mmd -D s -i $(<) ::/EFI/BOOT
+	mcopy -D o -i $(<) $(>) ::/EFI/BOOT/BOOTX64.EFI
+}

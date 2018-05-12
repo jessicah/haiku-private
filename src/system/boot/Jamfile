@@ -4,12 +4,69 @@ DEFINES += _BOOT_MODE ;
 
 UsePrivateHeaders [ FDirName libroot locale ] ;
 
+rule BuildCoffLoader {
+	local coffLoader = $(1) ;
+	local bootLoader = $(2) ;
+	# XXX: eventually switch on arch
+	COFF_FORMAT on $(coffLoader) = xcoff-powermac ;
+	HACK_COFF on $(coffLoader) = <build>hack-coff ;
+
+	Depends $(coffLoader) : <build>hack-coff ;
+	Depends $(coffLoader) : $(bootLoader) ;
+	MakeLocateDebug $(coffLoader) ;
+}
+
+actions BuildCoffLoader bind HACK_COFF {
+	rm -f $(1)
+	# get the address of the COFF entry
+	$(TARGET_OBJCOPY_$(TARGET_PACKAGING_ARCH)) -O symbolsrec $(2) $(2).syms
+	EP=`grep _coff_start $(2).syms | tr -d '\r' | cut -d'$' -f2`
+	rm -f $(2).syms
+	# copy to XCOFF format and patch the entry point
+	$(TARGET_OBJCOPY_$(TARGET_PACKAGING_ARCH)) -O $(COFF_FORMAT) --set-start="0x${EP}" $(2) $(1)
+	#$(CP) $(2) $(1)
+	# fill-in some fields objcopy missed
+	$(HACK_COFF) $(1)
+}
+
+rule BuildBiosLoader {
+	local haikuLoader = $(1) ;
+	local bootLoader = $(2) ;
+
+	Depends $(haikuLoader) : $(bootLoader) ;
+	MakeLocateDebug $(haikuLoader) ;
+
+	on $(1) ResAttr $(1) : $(RESFILES) : false ;
+	if ! [ on $(1) return $(DONT_USE_BEOS_RULES) ] {
+		SetType $(1) ;
+		MimeSet $(1) ;
+	}
+}
+
+actions BuildBiosLoader {
+	rm -f $(1)
+	$(TARGET_OBJCOPY_$(TARGET_PACKAGING_ARCH)) -O binary $(2) $(1)
+}
+
+rule BuildEFILoader {
+	local efiLoader = $(1) ;
+	local bootLoader = $(2) ;
+
+	Depends $(efiLoader) : $(bootLoader) ;
+	MakeLocateDebug $(efiLoader) ;
+}
+
+actions BuildEFILoader {
+	rm -f $(1)
+	$(TARGET_OBJCOPY_$(TARGET_PACKAGING_ARCH)) -j .text -j .sdata -j .data -j .dynamic -j .dynsym \
+	-j .rel -j .rela -j .reloc --target=efi-app-x86_64 $(2) $(1)
+}
+
 local extraSources = ;
 if $(TARGET_GCC_VERSION_$(TARGET_PACKAGING_ARCH)[1]) = 2 {
 	extraSources += atomic.S ;
 }
 
-local platform ;
 for platform in [ MultiBootSubDirSetup ] {
 	on $(platform) {
 		if $(TARGET_ARCH) = x86_64 && $(TARGET_BOOT_PLATFORM) = efi {
@@ -53,7 +110,7 @@ for platform in [ MultiBootSubDirSetup ] {
 			$(extraSources)
 		;
 
-		AddResources haiku_loader : boot_loader.rdef ;
+		AddResources haiku_loader.$(TARGET_BOOT_PLATFORM) : boot_loader.rdef ;
 
 		local archGrist = [ FGrist src system boot arch $(TARGET_KERNEL_ARCH) $(platform:G=) ] ;
 		local archObject = boot_arch_$(TARGET_KERNEL_ARCH).o ;
@@ -87,76 +144,17 @@ for platform in [ MultiBootSubDirSetup ] {
 
 			: $(HAIKU_TOP)/src/system/ldscripts/$(TARGET_ARCH)/boot_loader_$(platform:G=).ld
 			: $(ldflags)
-	;
+		;
+
+		BuildCoffLoader boot_loader_$(TARGET_BOOT_PLATFORM)_coff : boot_loader_$(TARGET_BOOT_PLATFORM) ;
+
+		if $(TARGET_BOOT_PLATFORM) != efi {
+			BuildBiosLoader haiku_loader.$(TARGET_BOOT_PLATFORM) : boot_loader_$(TARGET_BOOT_PLATFORM) ;
+		} else {
+			BuildEFILoader haiku_loader.$(TARGET_BOOT_PLATFORM) : boot_loader_$(TARGET_BOOT_PLATFORM) ;
+		}
 	}
 }
-
-rule BuildCoffLoader {
-	local coffLoader = $(1) ;
-	local bootLoader = $(2) ;
-	# XXX: eventually switch on arch
-	COFF_FORMAT on $(coffLoader) = xcoff-powermac ;
-	HACK_COFF on $(coffLoader) = <build>hack-coff ;
-
-	Depends $(coffLoader) : <build>hack-coff ;
-	Depends $(coffLoader) : $(bootLoader) ;
-	MakeLocateDebug $(coffLoader) ;
-}
-
-actions BuildCoffLoader bind HACK_COFF {
-	rm -f $(1)
-	# get the address of the COFF entry
-	$(TARGET_OBJCOPY_$(TARGET_PACKAGING_ARCH)) -O symbolsrec $(2) $(2).syms
-	EP=`grep _coff_start $(2).syms | tr -d '\r' | cut -d'$' -f2`
-	rm -f $(2).syms
-	# copy to XCOFF format and patch the entry point
-	$(TARGET_OBJCOPY_$(TARGET_PACKAGING_ARCH)) -O $(COFF_FORMAT) --set-start="0x${EP}" $(2) $(1)
-	#$(CP) $(2) $(1)
-	# fill-in some fields objcopy missed
-	$(HACK_COFF) $(1)
-}
-
-BuildCoffLoader boot_loader_$(TARGET_BOOT_PLATFORM)_coff : boot_loader_$(TARGET_BOOT_PLATFORM) ;
-
-rule BuildBiosLoader {
-	local haikuLoader = $(1) ;
-	local bootLoader = $(2) ;
-
-	Depends $(haikuLoader) : $(bootLoader) ;
-	MakeLocateDebug $(haikuLoader) ;
-
-	on $(1) ResAttr $(1) : $(RESFILES) : false ;
-	if ! [ on $(1) return $(DONT_USE_BEOS_RULES) ] {
-		SetType $(1) ;
-		MimeSet $(1) ;
-	}
-}
-
-actions BuildBiosLoader {
-	rm -f $(1)
-	$(TARGET_OBJCOPY_$(TARGET_PACKAGING_ARCH)) -O binary $(2) $(1)
-}
-
-BuildBiosLoader haiku_loader : boot_loader_bios_ia32 ;
-
-# different target for PXE, to be build with jam pxehaiku-loader
-BuildBiosLoader pxehaiku-loader : boot_loader_pxe_ia32 ;
-
-rule BuildEFILoader {
-	local efiLoader = $(1) ;
-	local bootLoader = $(2) ;
-
-	Depends $(efiLoader) : $(bootLoader) ;
-	MakeLocateDebug $(efiLoader) ;
-}
-
-actions BuildEFILoader {
-	rm -f $(1)
-	$(TARGET_OBJCOPY_$(TARGET_PACKAGING_ARCH)) -j .text -j .sdata -j .data -j .dynamic -j .dynsym \
-	-j .rel -j .rela -j .reloc --target=efi-app-x86_64 $(2) $(1)
-}
-
-BuildEFILoader haiku_loader.efi : boot_loader_efi ;
 
 SubInclude HAIKU_TOP src system boot arch $(TARGET_KERNEL_ARCH) ;
 SubInclude HAIKU_TOP src system boot loader ;

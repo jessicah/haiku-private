@@ -116,6 +116,9 @@ class EfiDevice : public Node
 				if (fDevicePath->SubType == MEDIA_HARDDRIVE_DP)
 					return BOOT_METHOD_HARD_DISK;
 			}
+			if (fDevicePath->Type == MESSAGING_DEVICE_PATH)
+				if (fDevicePath->SubType == MSG_ATAPI_DP)
+					return BOOT_METHOD_CD;
 
 			return BOOT_METHOD_DEFAULT;
 		}
@@ -307,11 +310,11 @@ add_boot_device_for_image(NodeList *devicesList)
 	if (!blockIo->Media->MediaPresent)
 		return B_ERROR;
 
-	EfiDevice *device = new(std::nothrow)EfiDevice(blockIo, savedDevicePath);
+	EfiDevice *device = new(std::nothrow)EfiDevice(blockIo, node);
 	if (device == NULL)
 		return B_ERROR;
 
-	add_device_path(&sMessagingDevices, savedDevicePath, handle);
+	add_device_path(&sMessagingDevices, node, handle);
 	devicesList->Insert(device);
 
 	return B_OK;
@@ -349,7 +352,7 @@ add_cd_devices(NodeList *devicesList)
 		if (!blockIo->Media->MediaPresent)
 			continue;
 
-		EfiDevice *device = new(std::nothrow)EfiDevice(blockIo, handle->device_path);
+		EfiDevice *device = new(std::nothrow)EfiDevice(blockIo, node);
 		if (device == NULL)
 			continue;
 

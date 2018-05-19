@@ -1582,20 +1582,21 @@ actions BuildFloppyBootImageFixupM68K
 
 #pragma mark - CD Boot Image rules
 
-rule BuildCDBootImage image : bootfloppy : extrafiles
+rule BuildCDBootImage image : bootfloppy : bootefi : extrafiles
 {
 	Depends $(image) : $(bootfloppy) ;
+	Depends $(image) : $(bootefi) ;
 	Depends $(image) : $(extrafiles) ;
 	BOOTIMG on $(image) = $(bootfloppy) ;
+	BOOTEFI on $(image) = $(bootefi) ;
 
-	BuildCDBootImage1 $(image) : $(bootfloppy) $(extrafiles) ;
+	BuildCDBootImage1 $(image) : $(bootfloppy) $(bootefi) $(extrafiles) ;
 }
 
 actions BuildCDBootImage1
 {
 	$(RM) $(<)
-	mkisofs -b $(BOOTIMG) -r -J -V bootimg -o $(<) $(>[1]) $(>[2-]) \
-		|| genisoimage -b $(BOOTIMG) -r -J -V bootimg -o $(<) $(>[1]) $(>[2-])
+	mkisofs -b $(BOOTIMG) -eltorito-alt-boot -no-emul-boot -e $(BOOTEFI) -r -J -V bootimg -o $(<) $(>[1]) $(>[2]) $(>[3-])
 }
 
 
@@ -1651,8 +1652,8 @@ rule BuildEfiSystemPartition image : efiLoader
 actions BuildEfiSystemPartition1
 {
 	$(RM) $(<)
-	dd if=/dev/zero of=$(<) bs=1048576 count=32
-	mkfs.msdos $(<)
+	dd if=/dev/zero of=$(<) bs=1024 count=2880
+	mformat -i $(<) -n 36 -h 2 -t 80
 	mmd -D s -i $(<) ::/EFI
 	mmd -D s -i $(<) ::/EFI/BOOT
 	mcopy -D o -i $(<) $(>) ::/EFI/BOOT/BOOTX64.EFI

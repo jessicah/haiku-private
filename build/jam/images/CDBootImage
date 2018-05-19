@@ -15,7 +15,12 @@ NotFile $(HAIKU_CD_BOOT_IMAGE_CONTAINER_NAME) ;
 local extras = README.html ;
 SEARCH on $(extras) = [ FDirName $(HAIKU_TOP) data boot_cd ] ;
 
-BuildCDBootImage $(HAIKU_CD_BOOT_IMAGE) : $(HAIKU_BOOT_FLOPPY) : $(extras) ;
+local efiLoader = haiku_loader.efi ;
+local efiPartition = esp.image ;
+MakeLocate $(efiPartition) : $(HAIKU_OUTPUT_DIR) ;
+BuildEfiSystemPartition $(efiPartition) : $(efiLoader) ;
+
+BuildCDBootImage $(HAIKU_CD_BOOT_IMAGE) : $(HAIKU_BOOT_FLOPPY) : $(efiPartition) : $(extras) ;
 
 
 NotFile haiku-boot-cd ;

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BASE=../../../../generated/tests/libbe_test/x86/apps
+BASE=../../../../generated/tests/libbe_test/$(getarch)/apps
 
 if [ ! -f $BASE/test_app_server ]; then
 	echo "You need to \"TARGET_PLATFORM=libbe_test jam install-test-apps\" first."

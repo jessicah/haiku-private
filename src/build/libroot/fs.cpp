@@ -1146,6 +1146,30 @@ _kern_unlock_node(int fd)
 
 // #pragma mark -
 
+// _kern_open_attr_dir
+int
+_kern_open_attr_dir(int fd, const char *path)
+{
+	return B_ERROR;
+}
+
+// _kern_remove_attr
+status_t
+_kern_remove_attr(int fd, const char *name)
+{
+	return B_ERROR;
+}
+
+// _kern_rename_attr
+status_t
+_kern_rename_attr(int fromFile, const char *fromName, int toFile, const char *toName)
+{
+	return B_ERROR;
+}
+
+
+// #pragma mark -
+
 // read_pos
 ssize_t
 read_pos(int fd, off_t pos, void *buffer, size_t bufferSize)
@@ -1600,3 +1624,97 @@ _haiku_build_renameat(int fromFD, const char* from, int toFD, const char* to)
 
 	RETURN_AND_SET_ERRNO(_kern_rename(fromFD, from, toFD, to));
 }
+
+
+#ifdef HAIKU_HOST_PLATFORM_HAIKU
+
+
+// fs_open_attr_dir
+extern "C" DIR *
+_haiku_build_fs_open_attr_dir(const char *path)
+{
+	return NULL;
+}
+
+// fs_lopen_attr_dir
+extern "C" DIR*
+_haiku_build_fs_lopen_attr_dir(const char *path)
+{
+	return NULL;
+}
+
+// fs_fopen_attr_dir
+extern "C" DIR*
+_haiku_build_fs_fopen_attr_dir(int fd)
+{
+	return NULL;
+}
+
+// fs_close_attr_dir
+extern "C" int
+_haiku_build_fs_close_attr_dir(DIR *dir)
+{
+	return -1;
+}
+
+// fs_read_attr_dir
+extern "C" struct dirent *
+_haiku_build_fs_read_attr_dir(DIR *dir)
+{
+	return NULL;
+}
+
+// fs_rewind_attr_dir
+extern "C" void
+_haiku_build_fs_rewind_attr_dir(DIR *dir)
+{
+	return;
+}
+
+// fs_fopen_attr
+extern "C" int
+_haiku_build_fs_fopen_attr(int fd, const char *attribute, uint32 type, int openMode)
+{
+	return -1;
+}
+
+// fs_close_attr
+extern "C" int
+_haiku_build_fs_close_attr(int fd)
+{
+	return _kern_close(fd);
+}
+
+// fs_read_attr
+extern "C" ssize_t
+_haiku_build_fs_read_attr(int fd, const char* attribute, uint32 /* type */, off_t pos,
+	void *buffer, size_t readBytes)
+{
+	return -1;
+}
+
+// fs_write_attr
+extern "C" ssize_t
+_haiku_build_fs_write_attr(int fd, const char* attribute, uint32 type, off_t pos,
+	const void *buffer, size_t writeBytes)
+{
+	return -1;
+}
+
+// fs_remove_attr
+extern "C" int
+_haiku_build_fs_remove_attr(int fd, const char* attribute)
+{
+	return -1;
+}
+
+// fs_stat_attr
+extern "C" int
+_haiku_build_fs_stat_attr(int fd, const char *attribute, struct attr_info *attrInfo)
+{
+	return -1;
+}
+
+
+#endif
+

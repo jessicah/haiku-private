@@ -49,7 +49,7 @@ namespace {
 
 // # pragma mark - Public API
 
-
+#if 0
 // fs_open_attr_dir
 extern "C" DIR *
 _haiku_build_fs_open_attr_dir(const char *path)
@@ -312,5 +312,7 @@ _kern_remove_attr(int fd, const char *name)
 		return errno;
 	return B_OK;
 }
+
+#endif
 
 #endif	// ! BUILDING_FS_SHELL

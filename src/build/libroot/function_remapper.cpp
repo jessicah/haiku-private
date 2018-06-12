@@ -282,7 +282,7 @@ renameat(int fromFD, const char* from, int toFD, const char* to)
 // fs_attr_* functions only need to be remapped on Haiku
 
 
-extern "C" void* HIDDEN_FUNCTION_ATTRIBUTE
+extern "C" DIR* HIDDEN_FUNCTION_ATTRIBUTE
 fs_open_attr_dir(const char *path)
 {
 	HIDDEN_FUNCTION(fs_open_attr_dir);
@@ -291,7 +291,7 @@ fs_open_attr_dir(const char *path)
 }
 
 
-extern "C" void* HIDDEN_FUNCTION_ATTRIBUTE
+extern "C" DIR* HIDDEN_FUNCTION_ATTRIBUTE
 fs_lopen_attr_dir(const char *path)
 {
 	HIDDEN_FUNCTION(fs_lopen_attr_dir);
@@ -300,7 +300,7 @@ fs_lopen_attr_dir(const char *path)
 }
 
 
-extern "C" void* HIDDEN_FUNCTION_ATTRIBUTE
+extern "C" DIR* HIDDEN_FUNCTION_ATTRIBUTE
 fs_fopen_attr_dir(int fd)
 {
 	HIDDEN_FUNCTION(fs_fopen_attr_dir);
@@ -310,7 +310,7 @@ fs_fopen_attr_dir(int fd)
 
 
 extern "C" int HIDDEN_FUNCTION_ATTRIBUTE
-fs_close_attr_dir(void *dir)
+fs_close_attr_dir(DIR *dir)
 {
 	HIDDEN_FUNCTION(fs_close_attr_dir);
 
@@ -318,8 +318,8 @@ fs_close_attr_dir(void *dir)
 }
 
 
-extern "C" void* HIDDEN_FUNCTION_ATTRIBUTE
-fs_read_attr_dir(void *dir)
+extern "C" dirent* HIDDEN_FUNCTION_ATTRIBUTE
+fs_read_attr_dir(DIR *dir)
 {
 	HIDDEN_FUNCTION(fs_read_attr_dir);
 
@@ -328,7 +328,7 @@ fs_read_attr_dir(void *dir)
 
 
 extern "C" void HIDDEN_FUNCTION_ATTRIBUTE
-fs_rewind_attr_dir(void *dir)
+fs_rewind_attr_dir(DIR *dir)
 {
 	HIDDEN_FUNCTION(fs_rewind_attr_dir);
 

@@ -38,7 +38,10 @@ rule TargetLibstdc++ asPath
 	} else {
 		if $(TARGET_PLATFORM) = libbe_test {
 			# Use the existing host library
-			return stdc++.r4 ;
+			if $(TARGET_PACKAGING_ARCH) = x86_gcc2 {
+				return libstdc++.r4.so ;
+			}
+			return stdc++ ;
 		}
 		# TODO: return libstdc++.so for non-Haiku target platform if needed
 	}

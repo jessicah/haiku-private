@@ -518,7 +518,7 @@ StarWindow::SwitchContext(direct_buffer_info *info)
 
 // This is the thread doing the star animation itself. It would be easy to
 // adapt to do any other sort of pixel animation.
-long
+int
 StarWindow::StarAnimation(void *data)
 {
 	star			*s;

@@ -43,7 +43,7 @@ private:
 inline	void	CrcStep();
 
 		// the drawing thread function.
-static	long	StarAnimation(void *data);
+static	int	StarAnimation(void *data);
 
 		// struct used to control each star.
 		typedef struct {

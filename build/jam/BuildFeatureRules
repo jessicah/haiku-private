@@ -215,6 +215,7 @@ rule BuildFeatureAttribute feature : attribute : flags
 	local featureObject = [ BuildFeatureObject $(feature) ] ;
 	local values
 		= [ on $(featureObject) return $(HAIKU_ATTRIBUTE_$(attribute)) ] ;
+	#Echo "var = $(attribute) = $(values:J= )" ;
 	if path in $(flags) {
 		# get the attribute's package and the corresponding extraction dir
 		local package

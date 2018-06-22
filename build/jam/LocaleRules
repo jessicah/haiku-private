@@ -67,6 +67,9 @@ rule ExtractCatalogEntries target : sources : signature : regexp
 	MakeLocate $(target) : [ FDirName $(HAIKU_CATALOGS_OBJECT_DIR) $(subdir) ] ;
 	Depends $(target) : $(sources) <build>collectcatkeys ;
 	LocalClean clean : $(target).pre ;
+	C++FLAGS += -DB_COLLECTING_CATKEYS ;
+	#Echo "sources: $(sources:J=, )" ;
+	CPP $(target).pre $(sources) ;
 	ExtractCatalogEntries1 $(target) : <build>collectcatkeys $(sources) ;
 }
 

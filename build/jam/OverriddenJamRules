@@ -419,6 +419,84 @@ actions C++
 	$(C++) -c "$(2)" $(C++FLAGS) $(CCDEFS) $(CCHDRS) -o "$(1)" ;
 }
 
+rule CPP
+{
+	Depends $(<) : $(>) [ on $(1) return $(PLATFORM) ] ;
+
+	on $(1) {
+		local flags ;
+		local includesSeparator ;
+		local localIncludesOption ;
+		local systemIncludesOption ;
+
+		# optimization flags
+		if $(DEBUG) = 0 {
+			flags += $(OPTIM) ;
+		} else {
+			flags += -O0 ;
+		}
+
+		if $(PLATFORM) = host {
+			# warning flags
+			if $(WARNINGS) != 0 {
+				flags += $(HOST_WARNING_C++FLAGS) ;
+				if $(WARNINGS) = treatAsErrors {
+					flags += -Werror $(HOST_WERROR_FLAGS) ;
+				}
+			}
+
+			# debug and other flags
+			flags += $(HOST_C++FLAGS) $(HOST_DEBUG_$(DEBUG)_C++FLAGS)
+				$(SUBDIRC++FLAGS) $(C++FLAGS) ;
+
+			if $(USES_BE_API) {
+				flags += $(HOST_BE_API_C++FLAGS) ;
+			}
+
+			C++ on $(1) = $(HOST_C++) ;
+
+			includesSeparator = $(HOST_INCLUDES_SEPARATOR) ;
+			localIncludesOption = $(HOST_LOCAL_INCLUDES_OPTION) ;
+			systemIncludesOption = $(HOST_SYSTEM_INCLUDES_OPTION) ;
+
+		} else {
+			# warning flags
+			if $(WARNINGS) != 0 {
+				flags += $(TARGET_WARNING_C++FLAGS_$(TARGET_PACKAGING_ARCH)) ;
+				if $(WARNINGS) = treatAsErrors {
+					flags += -Werror
+						$(TARGET_WERROR_FLAGS_$(TARGET_PACKAGING_ARCH)) ;
+				}
+			}
+
+			# debug and other flags
+			flags += $(TARGET_C++FLAGS_$(TARGET_PACKAGING_ARCH))
+				$(TARGET_DEBUG_$(DEBUG)_C++FLAGS_$(TARGET_PACKAGING_ARCH))
+				$(SUBDIRC++FLAGS) $(C++FLAGS) ;
+
+			C++ on $(1) = $(TARGET_C++_$(TARGET_PACKAGING_ARCH)) ;
+
+			includesSeparator
+				= $(TARGET_INCLUDES_SEPARATOR_$(TARGET_PACKAGING_ARCH)) ;
+			localIncludesOption
+				= $(TARGET_LOCAL_INCLUDES_OPTION_$(TARGET_PACKAGING_ARCH)) ;
+			systemIncludesOption
+				= $(TARGET_SYSTEM_INCLUDES_OPTION_$(TARGET_PACKAGING_ARCH)) ;
+		}
+
+		C++FLAGS on $(<) = $(flags) ;
+		CCHDRS on $(<) = [ FIncludes $(HDRS) : $(localIncludesOption) ]
+			$(includesSeparator)
+			[ FSysIncludes $(SYSHDRS) : $(systemIncludesOption) ] ;
+		CCDEFS on $(<) = [ FDefines $(DEFINES) ] ;
+	}
+}
+
+actions CPP
+{
+	$(C++) -E "$(2)" $(C++FLAGS) $(CCDEFS) $(CCHDRS) > "$(1)" ;
+}
+
 actions together Archive
 {
 	# Force recreation of the archive to avoid build errors caused by

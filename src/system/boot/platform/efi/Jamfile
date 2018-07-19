@@ -22,6 +22,7 @@ local platform_src =
 	start.cpp
 	console.cpp
 	video.cpp
+	graphics_console.cpp
 	debug.cpp
 	entry.S
 	mmu.cpp

@@ -6,6 +6,9 @@
  */
 
 
+#define USE_GRAPHICS_CONSOLE
+#ifndef USE_GRAPHICS_CONSOLE
+
 #include "console.h"
 
 #include <string.h>
@@ -19,7 +22,7 @@
 #include "efi_platform.h"
 
 
-class Console : public ConsoleNode {
+class Console : public ConsoleBase {
 	public:
 		Console();
 
@@ -27,6 +30,11 @@ class Console : public ConsoleNode {
 			size_t bufferSize);
 		virtual ssize_t WriteAt(void *cookie, off_t pos, const void *buffer,
 			size_t bufferSize);
+		
+		virtual void SetColor(int32 foreground, int32 background);
+        virtual void SetCursor(int32 x, int32 y);
+        virtual void ShowCursor();
+        virtual void HideCursor();
 };
 
 
@@ -41,7 +49,7 @@ FILE *stdin, *stdout, *stderr;
 
 
 Console::Console()
-	: ConsoleNode()
+	: ConsoleBase()
 {
 }
 
@@ -139,6 +147,34 @@ console_set_color(int32 foreground, int32 background)
 {
 	kSystemTable->ConOut->SetAttribute(kSystemTable->ConOut,
 		EFI_TEXT_ATTR((foreground & 0xf), (background & 0xf)));
+}
+
+
+void
+Console::SetColor(int32 foreground, int32 background)
+{
+	console_set_color(foreground, background);
+}
+
+
+void
+Console::SetCursor(int32 x, int32 y)
+{
+	console_set_cursor(x, y);
+}
+
+
+void
+Console::ShowCursor()
+{
+	console_show_cursor();
+}
+
+
+void
+Console::HideCursor()
+{
+	console_hide_cursor();
 }
 
 
@@ -244,3 +280,5 @@ platform_switch_to_text_mode(void)
 	kSystemTable->ConOut->Reset(kSystemTable->ConOut, false);
 	kSystemTable->ConOut->SetMode(kSystemTable->ConOut, sScreenMode);
 }
+
+#endif // USE_GRAPHICS_CONSOLE

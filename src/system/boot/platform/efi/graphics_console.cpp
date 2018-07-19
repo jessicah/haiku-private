@@ -24,7 +24,7 @@
 
 #include "efi_platform.h"
 
-#define PIXEL_WIDTH 9
+#define PIXEL_WIDTH 8
 #define PIXEL_HEIGHT 18
 
 
@@ -32,7 +32,7 @@ extern "C" uint8*
 video_load_font();
 
 
-class GraphicsConsole : public ConsoleBase {
+class GraphicsConsole : public ConsoleNode {
     public:
         GraphicsConsole();
 
@@ -40,15 +40,16 @@ class GraphicsConsole : public ConsoleBase {
             size_t bufferSize);
         virtual ssize_t WriteAt(void *cookie, off_t pos, const void *buffer,
             size_t bufferSize);
-        
-        virtual void SetColor(int32 foreground, int32 background) { };
-        virtual void SetCursor(int32 x, int32 y) {
-            fLeft = x; fTop = y;
+
+        void SetColor(int32 foreground, int32 background) { };
+        void SetCursor(int32 x, int32 y) {
+            fLeft = x * PIXEL_WIDTH; fTop = y * PIXEL_HEIGHT;
         }
-        virtual void ShowCursor() { };
-        virtual void HideCursor() { };
+        void ShowCursor() { };
+        void HideCursor() { };
 
         void LoadFontData() {
+		if (fFontBitmap == NULL)
             fFontBitmap = video_load_font();
         }
     
@@ -67,7 +68,7 @@ FILE *stdin, *stdout, *stderr;
 
 
 GraphicsConsole::GraphicsConsole()
-    : ConsoleBase(),
+    : ConsoleNode(),
     fFontBitmap(NULL),
     fLeft(0),
     fTop(0)
@@ -87,6 +88,17 @@ GraphicsConsole::WriteAt(void *cookie, off_t /*pos*/, const void *buffer,
     size_t bufferSize)
 {
     const char *string = (const char *)buffer;
+//	dprintf("GraphicsConsole::WriteAt()\n");
+//	LoadFontData();
+//	platform_switch_to_logo();
+if (!gKernelArgs.frame_buffer.enabled) {
+	dprintf("%s", string);
+	return bufferSize;
+} else {
+	if (fFontBitmap == NULL)
+		platform_switch_to_logo();
+	LoadFontData();
+}
 
     for (size_t i = 0; i < bufferSize; i++) {
         switch (string[i]) {
@@ -104,15 +116,20 @@ GraphicsConsole::WriteAt(void *cookie, off_t /*pos*/, const void *buffer,
             default: {
                 // display character, x += character width
                 int charIndex = string[i] - '!';
+		dprintf("output %c, index %d, left %d, top %d\n", string[i], charIndex, fLeft, fTop);
                 uint8 *bitmapStart = fFontBitmap + (charIndex * PIXEL_WIDTH * 3);
                 video_blit_image(gKernelArgs.frame_buffer.physical_buffer.start,
                     bitmapStart, PIXEL_WIDTH, PIXEL_HEIGHT, kUnifontImageWidth,
                     fLeft, fTop);
                 fLeft += PIXEL_WIDTH;
+//dprintf("framebuffer at %p, bitmap character at %p\n", (void*)gKernelArgs.frame_buffer.physical_buffer.start,
+//	bitmapStart);
             }
         }
     }
-    
+
+//dprintf("printed %s to screen\n", string);
+//	panic("stuff aint working\n");
     return bufferSize;
 }
 
@@ -248,6 +265,7 @@ extern "C" void
 platform_switch_to_text_mode(void)
 {
 	// DO NOTHING
+//	platform_switch_to_logo();
 }
 
 

@@ -13,7 +13,7 @@
 #include <boot/kernel_args.h>
 #include <boot/platform/generic/video.h>
 #include <boot/images.h>
-#include <boot/unifont.h>
+#include <boot/font.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -85,7 +85,7 @@ extern "C" uint8*
 video_load_font()
 {
 	uint8* uncompressedFont = NULL;
-	unsigned int uncompressedSize = kUnifontImageWidth * kUnifontImageHeight;
+	unsigned int uncompressedSize = kFontImageWidth * kFontImageHeight;
 	switch (gKernelArgs.frame_buffer.depth) {
 		case 8:
 			return NULL;
@@ -94,9 +94,9 @@ video_load_font()
 			uncompressedFont = (uint8*)kernel_args_malloc(uncompressedSize);
 			if (uncompressedFont == NULL)
 				return NULL;
-			
-			uncompress(kUnifontImage24BitCompressedImage,
-				sizeof(kUnifontImage24BitCompressedImage), uncompressedFont,
+
+			uncompress(kFontImage24BitCompressedImage,
+				sizeof(kFontImage24BitCompressedImage), uncompressedFont,
 				uncompressedSize);
 		break;
 	}

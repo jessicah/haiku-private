@@ -177,3 +177,84 @@ video_blit_image(addr_t frameBuffer, const uint8 *data,
 	}
 }
 
+
+static void
+blit_mask32(addr_t frameBuffer, const uint8 *data, int32 fore, int32 back,
+	uint16 width, uint16 height, uint16 imageWidth, uint16 left, uint16 top)
+{
+	uint32 *start = (uint32 *)(frameBuffer
+		+ gKernelArgs.frame_buffer.bytes_per_row * top + 4 * left);
+
+	for (int32 y = 0; y < height; y++) {
+		const uint8* src = data;
+		uint32* dst = start;
+		for (int32 x = 0; x < width; x++) {
+			if (src[0] == 255 && src[1] == 255 && src[2] == 255) {
+				dst[0] = fore;
+			} else {
+				dst[0] = back;
+			}
+			dst++;
+			src += 3;
+		}
+
+		data += imageWidth * 3;
+		start = (uint32 *)((addr_t)start
+			+ gKernelArgs.frame_buffer.bytes_per_row);
+	}
+}
+
+
+static void
+blit_mask24(addr_t frameBuffer, const uint8 *data, int32 fore, int32 back,
+	uint16 width, uint16 height, uint16 imageWidth, uint16 left, uint16 top)
+{
+	uint8 *start = (uint8 *)frameBuffer
+		+ gKernelArgs.frame_buffer.bytes_per_row * top + 3 * left;
+
+	for (int32 y = 0; y < height; y++) {
+		const uint8* src = data;
+		uint8* dst = start;
+		for (int32 x = 0; x < width; x++) {
+			if (src[0] == 0 && src[1] == 0 && src[2] == 0) {
+				dst[0] = (back >> 16) & 0xFF;
+				dst[1] = (back >> 8) & 0xFF;
+				dst[2] = back & 0xFF;
+			} else {
+				float r = (float)src[0] / 255.0;
+				float g = (float)src[1] / 255.0;
+				float b = (float)src[2] / 255.0;
+				r *= (fore >> 16) & 0xFF;
+				g *= (fore >> 8) & 0xFF;
+				b *= fore & 0xFF;
+				dst[0] = (uint8)r;
+				dst[1] = (uint8)g;
+				dst[2] = (uint8)b;
+			}
+			dst += 3;
+			src += 3;
+		}
+
+		data += imageWidth * 3;
+		start = start + gKernelArgs.frame_buffer.bytes_per_row;
+	}
+}
+
+
+void
+video_blit_image_mask(addr_t frameBuffer, const uint8 *data, int32 fore,
+	int32 back, uint16 width, uint16 height, uint16 imageWidth,
+	uint16 left, uint16 top)
+{
+	switch (gKernelArgs.frame_buffer.depth) {
+		case 24:
+			return blit_mask24(frameBuffer, data, fore, back,
+				width, height, imageWidth, left, top);
+		case 32:
+			return blit_mask32(frameBuffer, data, fore, back,
+				width, height, imageWidth, left, top);
+		default:
+			return;
+	}
+}
+

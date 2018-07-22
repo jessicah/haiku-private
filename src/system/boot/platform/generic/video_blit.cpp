@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm>
+
 
 #define TRACE_VIDEO
 #ifdef TRACE_VIDEO
@@ -174,6 +176,86 @@ video_blit_image(addr_t frameBuffer, const uint8 *data,
 		case 32:
 			return blit32(frameBuffer, data,
 				width, height, imageWidth, left, top);
+	}
+}
+
+
+inline uint8
+colorize_pixel(uint8 src, int32 foreground, int32 background)
+{
+	float fore = (float)src / 255.0;
+	float back = (float)(255 - src) / 255.0;
+	fore *= foreground;
+	back *= background;
+
+	uint8 result = (uint8)(fore + back);
+	return std::min<uint8>(result, 255);
+}
+
+
+static void
+blit_mask32(addr_t frameBuffer, const uint8 *data, int32 fore, int32 back,
+	uint16 width, uint16 height, uint16 imageWidth, uint16 left, uint16 top)
+{
+	uint32 *start = (uint32 *)(frameBuffer
+		+ gKernelArgs.frame_buffer.bytes_per_row * top + 4 * left);
+
+	for (int32 y = 0; y < height; y++) {
+		const uint8* src = data;
+		uint8* dst = (uint8 *)start;
+		for (int32 x = 0; x < width; x++) {
+			dst[0] = colorize_pixel(src[0], (fore >> 16) & 0xFF, (back >> 16) & 0xFF);
+			dst[1] = colorize_pixel(src[1], (fore >> 8) & 0xFF, (back >> 8) & 0xFF);
+			dst[2] = colorize_pixel(src[2], fore & 0xFF, back & 0xFF);
+			dst += 4;
+			src += 3;
+		}
+
+		data += imageWidth * 3;
+		start = (uint32 *)((addr_t)start
+			+ gKernelArgs.frame_buffer.bytes_per_row);
+	}
+}
+
+
+static void
+blit_mask24(addr_t frameBuffer, const uint8 *data, int32 fore, int32 back,
+	uint16 width, uint16 height, uint16 imageWidth, uint16 left, uint16 top)
+{
+	uint8 *start = (uint8 *)frameBuffer
+		+ gKernelArgs.frame_buffer.bytes_per_row * top + 3 * left;
+
+	for (int32 y = 0; y < height; y++) {
+		const uint8* src = data;
+		uint8* dst = start;
+		for (int32 x = 0; x < width; x++) {
+			dst[0] = colorize_pixel(src[0], (fore >> 16) & 0xFF, (back >> 16) & 0xFF);
+			dst[1] = colorize_pixel(src[1], (fore >> 8) & 0xFF, (back >> 8) & 0xFF);
+			dst[2] = colorize_pixel(src[2], fore & 0xFF, back & 0xFF);
+			dst += 3;
+			src += 3;
+		}
+
+		data += imageWidth * 3;
+		start = start + gKernelArgs.frame_buffer.bytes_per_row;
+	}
+}
+
+
+void
+video_blit_image_mask(addr_t frameBuffer, const uint8 *data, int32 fore,
+	int32 back, uint16 width, uint16 height, uint16 imageWidth,
+	uint16 left, uint16 top)
+{
+	switch (gKernelArgs.frame_buffer.depth) {
+		case 24:
+			return blit_mask24(frameBuffer, data, fore, back,
+				width, height, imageWidth, left, top);
+		case 32:
+			return blit_mask32(frameBuffer, data, fore, back,
+				width, height, imageWidth, left, top);
+		default:
+			return;
 	}
 }
 

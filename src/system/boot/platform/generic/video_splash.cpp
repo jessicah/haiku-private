@@ -13,6 +13,8 @@
 #include <boot/kernel_args.h>
 #include <boot/platform/generic/video.h>
 #include <boot/images.h>
+#define __FONT_IMAGE_DATA__
+#include <boot/font.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,6 +79,29 @@ uncompress(const uint8 compressed[], unsigned int compressedSize,
 		status = B_ERROR;
 
 	return status;
+}
+
+
+extern "C" uint8*
+video_load_font()
+{
+	uint8* uncompressedFont = NULL;
+	unsigned int uncompressedSize = kFontImageWidth * kFontImageHeight;
+
+	// only support 24/32-bit frame buffers
+	if (gKernelArgs.frame_buffer.depth < 24)
+		return NULL;
+
+	uncompressedSize *= 3;
+	uncompressedFont = (uint8*)kernel_args_malloc(uncompressedSize);
+	if (uncompressedFont == NULL)
+		return NULL;
+
+	uncompress(kFontImage24BitCompressedImage,
+		sizeof(kFontImage24BitCompressedImage), uncompressedFont,
+		uncompressedSize);
+
+	return uncompressedFont;
 }
 
 

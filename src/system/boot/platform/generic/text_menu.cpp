@@ -29,7 +29,7 @@ static const console_color kHelpTextColor = WHITE;
 static const console_color kItemColor = GRAY;
 static const console_color kSelectedItemColor = WHITE;
 static const console_color kItemBackgroundColor = kBackgroundColor;
-static const console_color kSelectedItemBackgroundColor = GRAY;
+static const console_color kSelectedItemBackgroundColor = BRIGHT_CYAN;
 static const console_color kDisabledColor = DARK_GRAY;
 
 static const console_color kSliderColor = CYAN;

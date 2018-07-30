@@ -14,6 +14,7 @@
 #include "sensors.h"
 
 #include "AreaKeeper.h"
+#include "atombios.h"
 #include "driver.h"
 #include "utility.h"
 
@@ -22,6 +23,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include <ACPI.h>
+#include <acpi.h>
 #include <boot_item.h>
 #include <driver_settings.h>
 #include <util/kernel_cpp.h>
@@ -41,23 +44,30 @@
 //	#pragma mark -
 
 
+acpi_module_info* gACPI;
+
+
 status_t
-mapAtomBIOS(radeon_info &info, uint32 romBase, uint32 romSize)
+mapAtomBIOS(radeon_info &info, addr_t romBase, uint32 romSize, bool physical)
 {
 	TRACE("%s: seeking AtomBIOS @ 0x%" B_PRIX32 " [size: 0x%" B_PRIX32 "]\n",
 		__func__, romBase, romSize);
 
 	uint8* rom;
+	area_id testArea = -1;
 
-	// attempt to access area specified
-	area_id testArea = map_physical_memory("radeon hd rom probe",
-		romBase, romSize, B_ANY_KERNEL_ADDRESS, B_KERNEL_READ_AREA,
-		(void**)&rom);
-
-	if (testArea < 0) {
-		ERROR("%s: couldn't map potential rom @ 0x%" B_PRIX32
-			"\n", __func__, romBase);
-		return B_NO_MEMORY;
+	if (physical) {
+		// attempt to access area specified
+		testArea = map_physical_memory("radeon hd rom probe",
+			romBase, romSize, B_ANY_KERNEL_ADDRESS, B_KERNEL_READ_AREA,
+			(void**)&rom);
+		if (testArea < 0) {
+			ERROR("%s: couldn't map potential rom @ 0x%" B_PRIX32
+				"\n", __func__, romBase);
+			return B_NO_MEMORY;
+		}
+	} else {
+		rom = (uint8 *)romBase;
 	}
 
 	// check for valid BIOS signature
@@ -65,7 +75,8 @@ mapAtomBIOS(radeon_info &info, uint32 romBase, uint32 romSize)
 		uint16 id = rom[0] + (rom[1] << 8);
 		TRACE("%s: BIOS signature incorrect @ 0x%" B_PRIX32 " (%X)\n",
 			__func__, romBase, id);
-		delete_area(testArea);
+		if (physical)
+			delete_area(testArea);
 		return B_ERROR;
 	}
 
@@ -79,7 +90,8 @@ mapAtomBIOS(radeon_info &info, uint32 romBase, uint32 romSize)
 		uint16 id = rom[0] + (rom[1] << 8);
 		TRACE("%s: not AtomBIOS rom at 0x%" B_PRIX32 "(%X)\n",
 			__func__, romBase, id);
-		delete_area(testArea);
+		if (physical)
+			delete_area(testArea);
 		return B_ERROR;
 	}
 
@@ -91,7 +103,8 @@ mapAtomBIOS(radeon_info &info, uint32 romBase, uint32 romSize)
 	if (info.rom_area < 0) {
 		ERROR("%s: unable to map kernel AtomBIOS space!\n",
 			__func__);
-		delete_area(testArea);
+		if (physical)
+			delete_area(testArea);
 		return B_NO_MEMORY;
 	}
 
@@ -112,7 +125,8 @@ mapAtomBIOS(radeon_info &info, uint32 romBase, uint32 romSize)
 	} else
 		ERROR("%s: AtomBIOS memcpy failed!\n", __func__);
 
-	delete_area(testArea);
+	if (physical)
+		delete_area(testArea);
 	return romValid ? B_OK : B_ERROR;
 }
 
@@ -122,20 +136,84 @@ radeon_hd_getbios(radeon_info &info)
 {
 	TRACE("card(%ld): %s: called\n", info.id, __func__);
 
-	uint32 romBase = 0;
+	addr_t romBase = 0;
 	uint32 romSize = 0;
 	uint32 romMethod = 0;
 
 	status_t mapResult = B_ERROR;
 
 	// first we try to find the AtomBIOS rom via various methods
-	for (romMethod = 0; romMethod < 3; romMethod++) {
+	for (romMethod = 0; romMethod < 4; romMethod++) {
 		switch(romMethod) {
 			case 0:
 				// TODO: *** New ACPI method
 				ERROR("%s: ACPI ATRM AtomBIOS TODO\n", __func__);
 				break;
 			case 1:
+			{
+				// *** UEFI ACPI method for IGP (VFCT table)
+				TRACE("%s: Using UEFI ACPI method for IGP (VFCT table)\n", __func__);
+				status_t result = get_module(B_ACPI_MODULE_NAME, (module_info**)&gACPI);
+				if (result != B_OK) {
+					TRACE("%s: ACPI module not found\n", __func__);
+					break;
+				}
+
+				struct acpi_table_header *tableHeader;
+				acpi_size tableSize;
+
+				UEFI_ACPI_VFCT *vfct = NULL;
+				unsigned long offset = 0;
+
+				if (!ACPI_SUCCESS(gACPI->get_table("VFCT", 1, (void**)&tableHeader))) {
+					TRACE("%s: ACPI VFCT table not found\n", __func__);
+					goto err;
+				}
+
+				tableSize = tableHeader->Length;
+				if (tableSize < sizeof(UEFI_ACPI_VFCT)) {
+					ERROR("%s: ACPI VFCT table truncated\n", __func__);
+					goto err;
+				}
+
+				vfct = (UEFI_ACPI_VFCT *)tableHeader;
+				offset = vfct->VBIOSImageOffset;
+
+				while (offset < tableSize) {
+					TRACE("%s: Searching for ACPI VFCT at offset %lu\n", __func__, offset);
+					GOP_VBIOS_CONTENT *vbios = (GOP_VBIOS_CONTENT *)((char *)tableHeader + offset);
+					VFCT_IMAGE_HEADER *vheader = &vbios->VbiosHeader;
+
+					offset += sizeof(VFCT_IMAGE_HEADER);
+					if (offset > tableSize) {
+						ERROR("%s: ACPI VFCT image header truncated\n", __func__);
+						goto err;
+					}
+
+					offset += vheader->ImageLength;
+					if (offset > tableSize) {
+						ERROR("%s: ACPI VFCT image truncated\n", __func__);
+						goto err;
+					}
+
+					if (vheader->ImageLength > 0
+							&& vheader->PCIBus == info.pci->bus
+							&& vheader->PCIDevice == info.pci->device
+							&& vheader->PCIFunction == info.pci->function
+							&& vheader->VendorID == info.pci->vendor_id
+							&& vheader->DeviceID == info.pci->device_id) {
+						romBase = (addr_t)&vbios->VbiosContent;
+						romSize = vheader->ImageLength;
+						mapResult = mapAtomBIOS(info, romBase, romSize, false);
+						break;
+					}
+				}
+
+			err:
+				put_module(B_ACPI_MODULE_NAME);
+				break;
+			}
+			case 2:
 				// *** Discreet card on IGP, check PCI BAR 0
 				// On post, the bios puts a copy of the IGP
 				// AtomBIOS at the start of the video ram
@@ -145,10 +223,10 @@ radeon_hd_getbios(radeon_info &info)
 				if (romBase == 0 || romSize == 0) {
 					ERROR("%s: No base found at PCI FB BAR\n", __func__);
 				} else {
-					mapResult = mapAtomBIOS(info, romBase, romSize);
+					mapResult = mapAtomBIOS(info, romBase, romSize, true);
 				}
 				break;
-			case 2:
+			case 3:
 			{
 				// *** PCI ROM BAR
 				// Enable ROM decoding for PCI BAR rom
@@ -166,7 +244,7 @@ radeon_hd_getbios(radeon_info &info)
 				if (romBase == 0 || romSize == 0) {
 					ERROR("%s: No base found at PCI ROM BAR\n", __func__);
 				} else {
-					mapResult = mapAtomBIOS(info, romBase, romSize);
+					mapResult = mapAtomBIOS(info, romBase, romSize, true);
 				}
 
 				// Disable ROM decoding
@@ -239,7 +317,7 @@ radeon_hd_getbios_ni(radeon_info &info)
 		ERROR("%s: No AtomBIOS location found at PCI ROM BAR\n", __func__);
 		result = B_ERROR;
 	} else {
-		result = mapAtomBIOS(info, romBase, romSize);
+		result = mapAtomBIOS(info, romBase, romSize, true);
 	}
 
 	if (result == B_OK) {
@@ -311,7 +389,7 @@ radeon_hd_getbios_r700(radeon_info &info)
 		ERROR("%s: No AtomBIOS location found at PCI ROM BAR\n", __func__);
 		result = B_ERROR;
 	} else {
-		result = mapAtomBIOS(info, romBase, romSize);
+		result = mapAtomBIOS(info, romBase, romSize, true);
 	}
 
 	if (result == B_OK) {
@@ -410,7 +488,7 @@ radeon_hd_getbios_r600(radeon_info &info)
 		ERROR("%s: No AtomBIOS location found at PCI ROM BAR\n", __func__);
 		result = B_ERROR;
 	} else {
-		result = mapAtomBIOS(info, romBase, romSize);
+		result = mapAtomBIOS(info, romBase, romSize, true);
 	}
 
 	if (result == B_OK) {
@@ -494,7 +572,7 @@ radeon_hd_getbios_avivo(radeon_info &info)
 		ERROR("%s: No AtomBIOS location found at PCI ROM BAR\n", __func__);
 		result = B_ERROR;
 	} else {
-		result = mapAtomBIOS(info, romBase, romSize);
+		result = mapAtomBIOS(info, romBase, romSize, true);
 	}
 
 	if (result == B_OK) {
@@ -695,7 +773,7 @@ radeon_hd_init(radeon_info &info)
 			// what happens when AtomBIOS goes over 128Kb?
 			// A Radeon HD 6990 has a 128Kb AtomBIOS
 
-		if (mapAtomBIOS(info, romBase, romSize) == B_OK) {
+		if (mapAtomBIOS(info, romBase, romSize, true) == B_OK) {
 			ERROR("%s: Found AtomBIOS at VGA shadow rom\n", __func__);
 			// Whew!
 			info.shared_info->rom_phys = romBase;

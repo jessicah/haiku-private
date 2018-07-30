@@ -14,6 +14,7 @@
 #include "sensors.h"
 
 #include "AreaKeeper.h"
+#include "atombios.h"
 #include "driver.h"
 #include "utility.h"
 
@@ -22,6 +23,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include <ACPI.h>
+#include <acpi.h>
 #include <boot_item.h>
 #include <driver_settings.h>
 #include <util/kernel_cpp.h>
@@ -39,6 +42,9 @@
 
 
 //	#pragma mark -
+
+
+acpi_module_info* gACPI;
 
 
 status_t
@@ -129,13 +135,75 @@ radeon_hd_getbios(radeon_info &info)
 	status_t mapResult = B_ERROR;
 
 	// first we try to find the AtomBIOS rom via various methods
-	for (romMethod = 0; romMethod < 3; romMethod++) {
+	for (romMethod = 0; romMethod < 4; romMethod++) {
 		switch(romMethod) {
 			case 0:
 				// TODO: *** New ACPI method
 				ERROR("%s: ACPI ATRM AtomBIOS TODO\n", __func__);
 				break;
 			case 1:
+			{
+				// *** UEFI ACPI method for IGP (VFCT table)
+				status_t result = get_module(B_ACPI_MODULE_NAME, (module_info**)&gACPI);
+				if (result != B_OK) {
+					TRACE("%s: ACPI module not found\n", __func__);
+					break;
+				}
+
+				struct acpi_table_header *tableHeader;
+				acpi_size tableSize;
+
+				UEFI_ACPI_VFCT *vfct = NULL;
+				unsigned long offset = 0;vfct->VBIOSImageOffset;
+
+				if (!ACPI_SUCCESS(gACPI->get_table("VFCT", 1, (void**)&tableHeader))) {
+					TRACE("%s: ACPI VFCT table not found\n", __func__);
+					goto err;
+				}
+
+				tableSize = tableHeader->Length;
+				if (tableSize < sizeof(UEFI_ACPI_VFCT)) {
+					ERROR("%s: ACPI VFCT table truncated\n", __func__);
+					goto err;
+				}
+
+				vfct = (UEFI_ACPI_VFCT *)tableHeader;
+				offset = vfct->VBIOSImageOffset;
+
+				while (offset < tableSize) {
+					GOP_VBIOS_CONTENT *vbios = (GOP_VBIOS_CONTENT *)((char *)tableHeader + offset);
+					VFCT_IMAGE_HEADER *vheader = &vbios->VbiosHeader;
+
+					offset += sizeof(VFCT_IMAGE_HEADER);
+					if (offset > tableSize) {
+						ERROR("%s: ACPI VFCT image header truncated\n", __func__);
+						goto err;
+					}
+
+					offset += vheader->ImageLength;
+					if (offset > tableSize) {
+						ERROR("%s: ACPI VFCT image truncated\n", __func__);
+						goto err;
+					}
+
+					if (vheader->ImageLength > 0
+							&& vheader->PCIBus == info.pci->bus
+							&& vheader->PCIDevice == info.pci->device
+							&& vheader->PCIFunction == info.pci->function
+							&& vheader->VendorID == info.pci->vendor_id
+							&& vheader->DeviceID == info.pci->device_id) {
+						romBase = (addr_t)vbios->VbiosContent;
+						romSize = vheader->ImageLength;
+						mapResult = mapAtomBIOS(info, romBase, romSize);
+						break;
+					}
+				}
+
+			err:
+				put_module(B_ACPI_MODULE_NAME);
+				break;
+			}
+			case 2:
 				// *** Discreet card on IGP, check PCI BAR 0
 				// On post, the bios puts a copy of the IGP
 				// AtomBIOS at the start of the video ram
@@ -148,7 +216,7 @@ radeon_hd_getbios(radeon_info &info)
 					mapResult = mapAtomBIOS(info, romBase, romSize);
 				}
 				break;
-			case 2:
+			case 3:
 			{
 				// *** PCI ROM BAR
 				// Enable ROM decoding for PCI BAR rom

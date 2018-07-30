@@ -2,6 +2,8 @@ SubDir HAIKU_TOP src add-ons kernel drivers graphics radeon_hd ;
 
 SetSubDirSupportedPlatformsBeOSCompatible ;
 
+UseHeaders [ FDirName $(HAIKU_TOP) src add-ons kernel bus_managers acpi acpica include ] : true ;
+UseHeaders [ FDirName $(HAIKU_TOP) src add-ons accelerants radeon_hd atombios ] ;
 UsePrivateHeaders [ FDirName graphics radeon_hd ] ;
 UsePrivateHeaders [ FDirName graphics common ] ;
 UsePrivateHeaders graphics kernel ;
@@ -17,5 +19,5 @@ KernelAddon radeon_hd :
 ;
 
 SEARCH on [ FGristFiles
-		kernel_cpp.cpp 
+		kernel_cpp.cpp
 	] = [ FDirName $(HAIKU_TOP) src system kernel util ] ;

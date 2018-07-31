@@ -884,8 +884,11 @@ kernel_debugger_loop(const char* messagePrefix, const char* message,
 
 		execute_panic_commands();
 
-		blue_screen_set_paging(pagingEnabled);
+		//blue_screen_set_paging(pagingEnabled);
 	}
+
+	evaluate_debug_command("syslog");
+	evaluate_debug_command("bt");
 
 	int32 continuableLine = -1;
 		// Index of the previous command line, if the command returned

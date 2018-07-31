@@ -506,12 +506,12 @@ rule ArchitectureSetupWarnings architecture
 	EnableWerror src add-ons kernel bus_managers random ;
 	EnableWerror src add-ons kernel bus_managers scsi ;
 	EnableWerror src add-ons kernel bus_managers tty ;
-	EnableWerror src add-ons kernel bus_managers usb ;
+#	EnableWerror src add-ons kernel bus_managers usb ;
 	EnableWerror src add-ons kernel bus_managers virtio ;
 	EnableWerror src add-ons kernel busses agp_gart ;
 	EnableWerror src add-ons kernel busses ata ;
 	EnableWerror src add-ons kernel busses scsi ;
-	EnableWerror src add-ons kernel busses usb ;
+#	EnableWerror src add-ons kernel busses usb ;
 	EnableWerror src add-ons kernel console ;
 	EnableWerror src add-ons kernel cpu ;
 #	EnableWerror src add-ons kernel debugger ; # gcc2
@@ -627,9 +627,9 @@ rule ArchitectureSetupWarnings architecture
 	EnableWerror src bin pkgman ;
 	EnableWerror src libs bsd ;
 	EnableWerror src apps ;
-	EnableWerror src kits ;
+#	EnableWerror src kits ;
 	EnableWerror src preferences ;
-	EnableWerror src servers ;
+#	EnableWerror src servers ;
 	EnableWerror src system boot ;
 #	EnableWerror src system kernel ;
 	EnableWerror src system libroot add-ons ;

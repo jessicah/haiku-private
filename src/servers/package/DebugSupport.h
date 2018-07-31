@@ -147,6 +147,8 @@ void dbg_printf_end();
 #define TFUNCTION_START()	DEBUG_CONTEXT_FUNCTION( "\n",  )
 #define TFUNCTION_END()		DEBUG_CONTEXT_FUNCTION( " done\n",  )
 
+#undef DEBUG
+#define DEBUG 0
 #if DEBUG
 	#define PRINT(x...)				TPRINT(x)
 	#define REPORT_ERROR(status)	TREPORT_ERROR(status)
@@ -166,10 +168,14 @@ void dbg_printf_end();
 	#define REPORT_ERROR(status)	;
 	#define RETURN_ERROR(status)	return status;
 	#define SET_ERROR(var, err)		var = err;
-	#define FATAL(x...)				DEBUG_CONTEXT( __out(x) )
-	#define ERROR(x...)				DEBUG_CONTEXT( __out(x) )
-	#define WARN(x...)				DEBUG_CONTEXT( __out(x) )
-	#define INFORM(x...)			DEBUG_CONTEXT( __out(x) )
+	#define FATAL(x...)				;
+//DEBUG_CONTEXT( __out(x) )
+	#define ERROR(x...)				;
+//DEBUG_CONTEXT( __out(x) )
+	#define WARN(x...)				;
+//DEBUG_CONTEXT( __out(x) )
+	#define INFORM(x...)			;
+//DEBUG_CONTEXT( __out(x) )
 	#define FUNCTION(x...)			;
 	#define FUNCTION_START()		;
 	#define FUNCTION_END()			;

@@ -21,7 +21,11 @@
 		dprintf(z); \
 	}
 
+#undef TRACE_OUTPUT
+#define TRACE_OUTPUT(x, y, z...) /* nothing */
+
 //#define TRACE_USB
+#undef TRACE_USB
 #ifdef TRACE_USB
 #define TRACE(x...)					TRACE_OUTPUT(this, "", x)
 #define TRACE_STATIC(x, y...)		TRACE_OUTPUT(x, "", y)

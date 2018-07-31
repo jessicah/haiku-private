@@ -78,6 +78,8 @@ mapAtomBIOS(radeon_info &info, addr_t romBase, uint32 romSize, bool physical)
 		if (physical)
 			delete_area(testArea);
 		return B_ERROR;
+	} else {
+		TRACE("%s: BIOS signature match\n", __func__);
 	}
 
 	// see if valid AtomBIOS rom
@@ -93,6 +95,8 @@ mapAtomBIOS(radeon_info &info, addr_t romBase, uint32 romSize, bool physical)
 		if (physical)
 			delete_area(testArea);
 		return B_ERROR;
+	} else {
+		TRACE("%s: valid AtomBIOS header\n", __func__);
 	}
 
 	info.rom_area = create_area("radeon hd AtomBIOS",
@@ -202,10 +206,26 @@ radeon_hd_getbios(radeon_info &info)
 							&& vheader->PCIFunction == info.pci->function
 							&& vheader->VendorID == info.pci->vendor_id
 							&& vheader->DeviceID == info.pci->device_id) {
+		//				ERROR("%s: address of vbios content #1: %p\n", __func__, &vbios->VbiosContent);
+		//				ERROR("%s: address of vbios content #2: %p\n", __func__, vbios->VbiosContent);
+		//				addr_t address = (addr_t)(vbios->VbiosContent);
+		//				ERROR("%s: address (addr_t) = %lx\n", __func__, address);
+		//				address = address & 0xFFFFFFFF;
+		//				ERROR("%s: address (addr_t) 32-bit: %lx\n", __func__, address);
 						romBase = (addr_t)&vbios->VbiosContent;
 						romSize = vheader->ImageLength;
+						TRACE("%s: VBIOS Signature: %02x:%02x\n", __func__,
+							vbios->VbiosContent[0], vbios->VbiosContent[1]);
+						ERROR("%s: Found matching hardware for ACPI VFCT\n", __func__);
+//physical_entry entry;
+//result = get_memory_map((void*)vbios->VbiosContent, vheader->ImageLength, &entry, 1);
+//romBase = (uint32)entry.address;
+//TRACE("%s: new rom base = %" B_PRIu32 "\n", __func__, romBase);
+
 						mapResult = mapAtomBIOS(info, romBase, romSize, false);
 						break;
+					} else {
+						TRACE("%s: ACPI VFCT table doesn't match hardware IDs\n", __func__);
 					}
 				}
 

@@ -786,13 +786,16 @@ TRACE("encoder object loop iterator = %d\n", k);
 						uint16 encoderObjectRaw
 							= B_LENDIAN_TO_HOST_INT16(
 							encoderObject->asObjects[k].usObjectID);
+TRACE("encoderObjectRaw = %x\n", encoderObjectRaw);
 						if (B_LENDIAN_TO_HOST_INT16(path->usGraphicObjIds[j])
 							== encoderObjectRaw) {
+TRACE("graphicObjectId == encoderObjectId (j = %d, j = %d)\n", j, k);
 							ATOM_COMMON_RECORD_HEADER* record
 								= (ATOM_COMMON_RECORD_HEADER*)
 								((uint16*)gAtomContext->bios + tableOffset
 								+ B_LENDIAN_TO_HOST_INT16(
 								encoderObject->asObjects[k].usRecordOffset));
+TRACE("record = %p\n", record);
 							ATOM_ENCODER_CAP_RECORD* capRecord;
 							uint16 caps = 0;
 							while (record->ucRecordSize > 0
@@ -801,23 +804,27 @@ TRACE("encoder object loop iterator = %d\n", k);
 								<= ATOM_MAX_OBJECT_RECORD_NUMBER) {
 								switch (record->ucRecordType) {
 									case ATOM_ENCODER_CAP_RECORD_TYPE:
+TRACE("have ATOM_ENCODER_CAP_RECORD_TYPE\n");
 										capRecord = (ATOM_ENCODER_CAP_RECORD*)
 											record;
+TRACE("capRecord = %p\n", capRecord);
 										caps = B_LENDIAN_TO_HOST_INT16(
 											capRecord->usEncoderCap);
+TRACE("caps = %x\n", caps);
 										break;
 								}
 								record = (ATOM_COMMON_RECORD_HEADER*)
 									((char*)record + record->ucRecordSize);
+TRACE("next record = %p\n", record);
 							}
 
 							uint32 encoderID
 								= (encoderObjectRaw & OBJECT_ID_MASK)
 									>> OBJECT_ID_SHIFT;
-
+TRACE("encoderID = %x\n", encoderID);
 							uint32 encoderType = encoder_type_lookup(encoderID,
 								connectorFlags);
-
+TRACE("encoderType = %x\n", encoderType);
 							if (encoderType == VIDEO_ENCODER_NONE) {
 								ERROR("%s: Path #%" B_PRId32 ":"
 									"skipping unknown encoder.\n",
@@ -826,7 +833,6 @@ TRACE("encoder object loop iterator = %d\n", k);
 							}
 
 							encoder_info* encoder;
-TRACE("have encoder: ID = %x, type = %x\n", encoderID, encoderType);
 							// External encoders are behind DVO or UNIPHY
 							if (encoder_is_external(encoderID)) {
 								encoder = &connector->encoderExternal;

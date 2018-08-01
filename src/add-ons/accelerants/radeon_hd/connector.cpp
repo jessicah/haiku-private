@@ -360,7 +360,7 @@ gpio_general_populate()
 
 	int numIndices = (tableSize - sizeof(ATOM_COMMON_TABLE_HEADER)) /
 		sizeof(ATOM_GPIO_PIN_ASSIGNMENT);
-	
+
 	// Find the next available GPIO pin index
 	int32 gpioIndex = -1;
 	for(int32 pin = 0; pin < MAX_GPIO_PINS; pin++) {
@@ -656,6 +656,8 @@ connector_probe()
 		&tableMajor, &tableMinor, &tableOffset) != B_OK) {
 		ERROR("%s: ERROR: parsing data header failed!\n", __func__);
 		return B_ERROR;
+	} else {
+		TRACE("%s: success parsing data header\n", __func__);
 	}
 
 	if (tableMinor < 2) {
@@ -670,7 +672,9 @@ connector_probe()
 	ATOM_DISPLAY_OBJECT_PATH_TABLE* pathObject;
 	ATOM_OBJECT_HEADER* objectHeader;
 
+	TRACE("%s: gAtomContent->bios = %p\n", __func__, gAtomContext->bios);
 	objectHeader = (ATOM_OBJECT_HEADER*)(gAtomContext->bios + tableOffset);
+	TRACE("%s: objectHeader = %p\n", __func__, objectHeader);
 	pathObject = (ATOM_DISPLAY_OBJECT_PATH_TABLE*)
 		(gAtomContext->bios + tableOffset
 		+ B_LENDIAN_TO_HOST_INT16(objectHeader->usDisplayPathTableOffset));
@@ -683,6 +687,9 @@ connector_probe()
 	routerObject = (ATOM_OBJECT_TABLE*)
 		(gAtomContext->bios + tableOffset
 		+ B_LENDIAN_TO_HOST_INT16(objectHeader->usRouterObjectTableOffset));
+
+	TRACE("%s: pathObject = %p, connectorObject = %p, encoderObject = %p, routerObject = %p\n",
+		__func__, pathObject, connectorObject, encoderObject, routerObject);
 	int deviceSupport = B_LENDIAN_TO_HOST_INT16(objectHeader->usDeviceSupport);
 
 	int pathSize = 0;
@@ -697,20 +704,27 @@ connector_probe()
 		if (connectorIndex >= ATOM_MAX_SUPPORTED_DEVICE)
 			continue;
 
+		TRACE("%s: probing connector %u\n", __func__, connectorIndex);
+
 		uint8* address = (uint8*)pathObject->asDispPath;
 		ATOM_DISPLAY_OBJECT_PATH* path;
 		address += pathSize;
 		path = (ATOM_DISPLAY_OBJECT_PATH*)address;
 		pathSize += B_LENDIAN_TO_HOST_INT16(path->usSize);
 
+TRACE("path = %p\n", address);
+
 		uint32 connectorType;
+
 		uint16 connectorFlags = B_LENDIAN_TO_HOST_INT16(path->usDeviceTag);
+TRACE("flags = %x\n", connectorFlags);
 
 		if ((deviceSupport & connectorFlags) != 0) {
 
 			uint16 connectorObjectID
 				= (B_LENDIAN_TO_HOST_INT16(path->usConnObjectId)
 					& OBJECT_ID_MASK) >> OBJECT_ID_SHIFT;
+TRACE("connectorObjectID = %x\n", connectorObjectID);
 			//uint8 con_obj_num
 			//	= (B_LENDIAN_TO_HOST_INT16(path->usConnObjectId)
 			//	& ENUM_ID_MASK) >> ENUM_ID_SHIFT;
@@ -744,10 +758,12 @@ connector_probe()
 			}
 
 			connector_info* connector = gConnector[connectorIndex];
+			TRACE("%s: connector_info = %p\n", __func__, connector);
 
 			int32 j;
 			for (j = 0; j < ((B_LENDIAN_TO_HOST_INT16(path->usSize) - 8) / 2);
 				j++) {
+TRACE("loop iteration = %d\n", j);
 				//uint16 grph_obj_id
 				//	= (B_LENDIAN_TO_HOST_INT16(path->usGraphicObjIds[j])
 				//	& OBJECT_ID_MASK) >> OBJECT_ID_SHIFT;
@@ -758,10 +774,15 @@ connector_probe()
 					= (B_LENDIAN_TO_HOST_INT16(path->usGraphicObjIds[j]) &
 					OBJECT_TYPE_MASK) >> OBJECT_TYPE_SHIFT;
 
+TRACE("graphicObjectType = %x\n", graphicObjectType);
+
 				if (graphicObjectType == GRAPH_OBJECT_TYPE_ENCODER) {
 					// Found an encoder
+TRACE("found an encoder\n");
+TRACE("encoder has %d objects\n", encoderObject->ucNumberOfObjects);
 					int32 k;
 					for (k = 0; k < encoderObject->ucNumberOfObjects; k++) {
+TRACE("encoder object loop iterator = %d\n", k);
 						uint16 encoderObjectRaw
 							= B_LENDIAN_TO_HOST_INT16(
 							encoderObject->asObjects[k].usObjectID);
@@ -805,7 +826,7 @@ connector_probe()
 							}
 
 							encoder_info* encoder;
-
+TRACE("have encoder: ID = %x, type = %x\n", encoderID, encoderType);
 							// External encoders are behind DVO or UNIPHY
 							if (encoder_is_external(encoderID)) {
 								encoder = &connector->encoderExternal;
@@ -834,7 +855,7 @@ connector_probe()
 					ERROR("%s: TODO: Found router object?\n", __func__);
 				} // END if object is router
 			}
-
+TRACE("set up info buses such as ddc...\n");
 			// Set up information buses such as ddc
 			if (((connectorFlags & ATOM_DEVICE_TV_SUPPORT) == 0)
 				&& (connectorFlags & ATOM_DEVICE_CV_SUPPORT) == 0) {
@@ -888,6 +909,7 @@ connector_probe()
 		} // END for each valid connector
 	} // end for each display path
 
+	TRACE("%s: finished probe\n", __func__);
 	return B_OK;
 }
 

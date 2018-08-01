@@ -221,7 +221,6 @@ radeon_hd_getbios(radeon_info &info)
 //result = get_memory_map((void*)vbios->VbiosContent, vheader->ImageLength, &entry, 1);
 //romBase = (uint32)entry.address;
 //TRACE("%s: new rom base = %" B_PRIu32 "\n", __func__, romBase);
-
 						mapResult = mapAtomBIOS(info, romBase, romSize, false);
 						break;
 					} else {
